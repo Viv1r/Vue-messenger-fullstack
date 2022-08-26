@@ -1,0 +1,22 @@
+{
+  "name": "vue-messenger-backend",
+  "version": "1.0.0",
+  "description": "back",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "nodemon index.js",
+    "setup": "node setup.js"
+  },
+  "author": "viv1r",
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.1",
+    "mysql2": "^2.3.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19"
+  }
+}

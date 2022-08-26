@@ -1,0 +1,29 @@
+# Logs
+logs
+*.log
+*/npm-debug.log*
+*/yarn-debug.log*
+*/yarn-error.log*
+*/pnpm-debug.log*
+*/lerna-debug.log*
+
+messenger/node_modules
+/api/node_modules/
+messenger/.DS_Store
+messenger/dist
+messenger/dist-ssr
+messenger/coverage
+messenger/*.local
+
+/cypress/videos/
+/cypress/screenshots/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
