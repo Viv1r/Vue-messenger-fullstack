@@ -12,12 +12,23 @@ const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
 const app = express();
 
-const gotMessages = []; // Сюда попадает айди юзера, если ему прислали сообщение, и удаляется, как только сообщение доставлено
-
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use(cookieParser());
 app.use(cors());
+
+
+const messagesQueue = []; // Сюда будут попадать новые сообщения на время, чтобы отсылать их прямо из этого массива, не отсылаясь к БД
+
+function addToQueue(message) {
+    let index = messagesQueue.push(message) - 1;
+    console.log('added to queue\n', message);
+    console.log('queue length:', messagesQueue.length);
+    setTimeout(() => {
+        if (messagesQueue[index])
+            messagesQueue.splice(index, 1);
+    }, 20000);
+}
 
 
 // MySQL
@@ -58,6 +69,7 @@ app.post('/getchats', (req, res) => {
         sql.query(
             `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
             SELECT
+                @UserID as userID,
                 IF(temp.sender_id = @UserID, temp.recipient_id, temp.sender_id) AS chatID,
                 (SELECT display_name FROM users WHERE id = chatID) AS chatName,
                 users.id AS senderID,
@@ -72,6 +84,11 @@ app.post('/getchats', (req, res) => {
             ) AS temp
             JOIN users ON users.id = temp.sender_id`,
             (err, result) => {
+                messagesQueue.forEach((elem, index) => {
+                    if (elem.recipientID == result[1].userID) {
+                        messagesQueue.splice(index, 1);
+                    }
+                });
                 let final = {};
                 result[1].forEach(elem => {
                     let chatID = elem.chatID;
@@ -102,21 +119,39 @@ app.post('/seekMessages', (req, res) => {
     sql.query(
         `SELECT id FROM users WHERE cookie_hash = '${req.cookies.userhash}' LIMIT 1`,
         (err, result) => {
-            let userID = result[0].id;
+            let userID = Number(result[0].id);
+            if (!userID) {
+                res.clearCookie('userhash');
+                res.status(200).json({status: 'LOGOUT'});
+                res.end();
+                return;
+            }
+            let timeout;
             let interval = setInterval(() => {
-                if (gotMessages.includes(userID)) {
-                    gotMessages.splice(
-                        gotMessages.indexOf(userID), 1
-                    );
+                let id = userID;
+                let check = messagesQueue.map((elem, index) => {
+                    if (elem.recipientID === id)
+                        return messagesQueue.indexOf(elem);
+                })
+                .filter(elem => typeof(elem) == 'number');
+                if (check.length) {
+                    console.log('check:', check, '\nqueue:', messagesQueue);
                     clearInterval(interval);
-                    sql.query(
-                        `SELECT id, `
-                    )
+                    clearTimeout(timeout);
+                    let result = [];
+                    check.forEach(elem => {
+                        result.push(
+                            messagesQueue.splice(elem, 1)[0]
+                        );
+                    });
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: result});
+                    res.end();
+                    console.log('result', result, '\nsent to id', id);
                 }
-            }, 200);
-            setTimeout(() => {
+            }, 250);
+            timeout = setTimeout(() => {
                 clearInterval(interval);
-                res.status(200).json({status: 'got nothing...'});
+                res.status(200).json({status: 'NO_NEW_MESSAGES'});
                 res.end();
             }, 10000);
             let hash = req.cookies.userhash;
@@ -131,7 +166,8 @@ app.post('/readchat', (req, res) => {
         hash = req.cookies.userhash;
     sql.query(
         `UPDATE messages SET readmark = 1
-        WHERE sender_id = ${chatID} AND recipient_id = (SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1)`,
+        WHERE sender_id = ${chatID}
+        AND recipient_id = (SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1)`,
         (err, result) => {
             if (result.affectedRows) {
                 res.status(200).json({status: 'READ'});
@@ -228,12 +264,12 @@ app.post('/sendmessage', (req, res) => {
         FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
             if (!result.length) {
-                res.status(200).json({status: 'NOT_SENT', errors: ['User is not identified']});
+                res.status(200).json({status: 'NOT_SENT', errors: ['User is not identified!']});
                 res.end();
                 return;
             }
             if (!result[0].recipientExists) {
-                res.status(200).json({status: 'NOT_SENT', errors: ['Recipient not found']});
+                res.status(200).json({status: 'NOT_SENT', errors: ['Recipient does not exist!']});
                 res.end();
                 return;
             }
@@ -241,16 +277,14 @@ app.post('/sendmessage', (req, res) => {
             sql.query(
                 `INSERT INTO messages (sender_id, recipient_id, message_text)
                 VALUES (${senderID}, ${recipient}, '${message}');
-                SELECT users.display_name AS name, messages.message_text AS text, messages.datetime
+                SELECT users.display_name AS sender, messages.message_text AS text, messages.datetime
                 FROM messages JOIN users ON messages.sender_id = users.id
                 WHERE sender_id = ${senderID} AND recipient_id = ${recipient}
                 ORDER BY datetime DESC LIMIT 1`,
                 (err, result) => {
-                    console.log(result);
                     if (result[0].affectedRows) {
-                        if (!gotMessages.includes(recipient))
-                            gotMessages.push(recipient);
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
+                        addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
                     }
                     else {
                         res.status(200).json({status: 'NOT_SENT', errors: ['Server error']});

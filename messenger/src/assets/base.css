@@ -6,7 +6,8 @@
   --vt-c-black-soft: #222222;
   --vt-c-black-mute: #282828;
   --vt-c-black-lighter: rgb(61, 61, 61);
-  --vt-c-black-lighter-x2: rgb(77, 77, 77);
+  --vt-c-black-lighter-x2: rgb(76, 76, 76);
+  --vt-c-black-lighter-x3: rgb(90, 90, 90);
 }
 
 :root {
@@ -344,6 +345,10 @@ body {
   background-color: var(--vt-c-black-lighter-x2);
 }
 
+.chat.selected:hover {
+  background-color: var(--vt-c-black-lighter-x3);
+}
+
 .chat_info {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -377,6 +382,8 @@ body {
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
+  -webkit-transform: translateY(-2px);
+          transform: translateY(-2px);
 }
 
 .chat_info h1 {
@@ -521,7 +528,16 @@ body {
   height: -moz-fit-content;
   height: fit-content;
   padding: 0px 20px 8px 20px;
-  display: block;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
 }
 
 .message h1 {
@@ -865,12 +881,16 @@ button#login:hover {
   background-color: white;
 }
 
-.app_wrapper.light .chat.selected {
-  background-color: #bdbdbd;
+.app_wrapper.light .chat:hover {
+  background-color: #dadada;
 }
 
-.app_wrapper.light .chat:hover {
-  background-color: #c4c4c4;
+.app_wrapper.light .chat.selected {
+  background-color: #c8c8c8;
+}
+
+.app_wrapper.light .chat.selected:hover {
+  background-color: #bababa;
 }
 
 .app_wrapper.light .chatlist_menu,
@@ -891,16 +911,10 @@ button#login:hover {
   color: black;
 }
 
-.app_wrapper.light .chatlist_menu h1:hover,
-.app_wrapper.light .chatlist_menu p:hover,
 .app_wrapper.light .chatlist_menu .message:hover,
-.app_wrapper.light .no_chat h1:hover,
-.app_wrapper.light .no_chat p:hover,
 .app_wrapper.light .no_chat .message:hover,
-.app_wrapper.light .current_chat h1:hover,
-.app_wrapper.light .current_chat p:hover,
 .app_wrapper.light .current_chat .message:hover {
-  background-color: #d8d8d8;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .app_wrapper.light .chatlist_menu img,
@@ -911,30 +925,29 @@ button#login:hover {
           filter: brightness(90%);
 }
 
-.app_wrapper.light .chatlist_footer {
-  background-color: #c4c4c4;
-}
-
 .app_wrapper.light .chatlist_footer div {
   color: black;
 }
 
 .app_wrapper.light .typeline,
 .app_wrapper.light .chat_header,
-.app_wrapper.light .chatlist_header {
+.app_wrapper.light .chatlist_header,
+.app_wrapper.light .chatlist_footer {
   background-color: #e2e2e2;
 }
 
 .app_wrapper.light .typeline input,
 .app_wrapper.light .chat_header input,
-.app_wrapper.light .chatlist_header input {
+.app_wrapper.light .chatlist_header input,
+.app_wrapper.light .chatlist_footer input {
   background-color: white;
   color: black;
 }
 
 .app_wrapper.light .typeline .sendbutton,
 .app_wrapper.light .chat_header .sendbutton,
-.app_wrapper.light .chatlist_header .sendbutton {
+.app_wrapper.light .chatlist_header .sendbutton,
+.app_wrapper.light .chatlist_footer .sendbutton {
   -webkit-filter: invert(1);
           filter: invert(1);
 }

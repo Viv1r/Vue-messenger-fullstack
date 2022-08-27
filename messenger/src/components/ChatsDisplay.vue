@@ -20,7 +20,7 @@
             </div>
         </div>
     </div>
-    <div v-else class="no_chats">
+    <div v-else-if="chatsLoaded" class="no_chats">
         <p>No chats!</p>
     </div>
     <div class="chatlist_footer">
@@ -28,7 +28,7 @@
             <img src="/src/assets/new_chat.svg" alt="new_chat">
             New chat
         </div>
-        <div class="button_logout" @click="logout()">
+        <div class="button_logout" @click="$emit('logout')">
             <img src="/src/assets/logout.svg" alt="logout">
             Logout
         </div>
@@ -42,7 +42,7 @@
 
 <div v-else-if="miniMode ? (currentChat !== null) : true" :class="'current_chat' + (miniMode ? ' maxed' : '')">
     <div class="chat_header">
-        <button v-if="miniMode" @click="setCurrentChat(null)">←</button>
+        <button v-if="miniMode" @click="$emit('goToChat', null)">←</button>
         <h1>{{ chats[currentChat].name }}</h1>
     </div>
     <div class="messages_window">
@@ -75,7 +75,7 @@
         </template>
     </div>
     <div class="typeline">
-        <input type="text" v-model="toSend" @keydown.enter="sendMessage()">
+        <input type="text" v-model="toSend" @keydown.enter="sendMessage()" @input="setDraft($event.target.value)">
         <div :class="'sendbutton' + (toSend.length ? '' : ' inactive')" @click="sendMessage()">
             <img src="../assets/send_message.png" alt="send_message" rel="preload">
         </div>
@@ -97,21 +97,20 @@ import format from '../modules/format';
 export default {
     data() {
         return {
-            toSend: "",
+            toSend: ""
         }
     },
     el: '#app',
     props: {
-        chats: { type: Object, default: {1:{}} },
-        currentChat: { default: false },
+        chats: { type: Object, default: {} },
+        currentChat: { default: null },
         miniMode: { type: Boolean, default: false },
         lightTheme: { type: Boolean, default: false },
+        chatsLoaded: { type: Boolean, default: false },
         setChats: Function,
-        setCurrentChat: Function,
-        goToChat: Function,
-        logout: Function
+        setCurrentChat: Function
     },
-    emits: [ 'setLightTheme', 'addMessage' ],
+    emits: ['setLightTheme', 'addMessage', 'goToChat', 'logout', 'seekMessagesStart'],
     methods: {
         getLastMessage(chat, length) {
             try {
@@ -127,6 +126,7 @@ export default {
             if (!recipientID || !message.length)
                 return;
             this.toSend = '';
+            localStorage.removeItem('draft_' + recipientID);
             document.querySelector('.messages_wrapper').scrollTop = 0;
             fetch('api/sendmessage', {
                 method: 'POST',
@@ -145,7 +145,7 @@ export default {
                     this.$emit('addMessage',
                         recipientID,
                         result.senderID,
-                        result.name,
+                        result.sender,
                         result.text,
                         result.datetime
                     );
@@ -156,10 +156,18 @@ export default {
             return ts
                 ? format.mask(ts, '####.##.## ##:##')
                 : 'out of time'
+        },
+        setDraft(text) {
+            localStorage.setItem('draft_' + this.currentChat, text);
+        },
+        goToChat(index) {
+            this.$emit('goToChat', index);
+            this.toSend = localStorage.getItem('draft_' + index) || '';
         }
     },
     mounted() {
         loadchats.load(this.setChats);
+        this.$emit('seekMessagesStart');
     }
 }
 

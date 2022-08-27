@@ -11,10 +11,14 @@
 			:currentChat="currentChat"
 			:miniMode="miniMode"
 			:lightTheme="lightTheme"
-            :goToChat="goToChat"
-            :setChats="(data) => chats = data"
-            :setCurrentChat="(id) => currentChat = id"
-            :logout="logout"
+            :setChats="(data) => {
+                chats = data;
+                chatsLoaded = true
+            }"
+            :chatsLoaded="chatsLoaded"
+            @seekMessagesStart="seekMessages()"
+            @goToChat="goToChat"
+            @logout="logout"
             @addMessage="(chatID, senderID, name, text, datetime) =>
                 this.chats[chatID].messages.push(
                     {
@@ -104,6 +108,7 @@ export default {
             loading: false,
             miniMode: false,
             chats: {},
+            chatsLoaded: false,
             registerForm: {},
             registerErrors: [],
             loginForm: {},
@@ -122,9 +127,11 @@ export default {
         auth.cookieAuth((screen) => this.screen = screen);
     },
     methods: {
-        goToChat(i) {
-            this.currentChat = i;
-            this.readChat(i);
+        goToChat(id) {
+            this.currentChat = id;
+            if (id) {
+                this.readChat(id);
+            }
         },
         readChat(id) {
             fetch('api/readchat', {
@@ -160,10 +167,40 @@ export default {
         },
         logout() {
             auth.logout(this);
+            localStorage.clear();
         },
 		updateChats(arg) {
 			console.log('Update chats');
-		}
+		},
+        seekMessages() {
+            fetch('api/seekmessages', {
+                method: 'POST'
+            })
+            .then(data => data.json())
+            .then(result => {
+                if (result.status == 'LOGOUT') {
+                    logout();
+                    return;
+                }
+                console.log(result);
+                if (result.status == 'GOT_MESSAGES' && result.messages.length) {
+                    result.messages.forEach(elem => {
+                        console.log(elem);
+                        let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime]
+                        if (senderID && sender) {
+                            this.chats[senderID] = this.chats[senderID] || { name: sender, messages: [], unreadCount: 0 };
+                            this.chats[senderID].messages.push({
+                                senderID: senderID,
+                                sender: sender,
+                                text: text || '',
+                                datetime: datetime || 'Out of time'
+                            });
+                        }
+                    });
+                }
+                this.seekMessages();
+            });
+        },
     }
 }
 

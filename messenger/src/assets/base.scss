@@ -8,7 +8,8 @@
     --vt-c-black-soft: #222222;
     --vt-c-black-mute: #282828;
     --vt-c-black-lighter: rgb(61, 61, 61);
-    --vt-c-black-lighter-x2: rgb(77, 77, 77);
+    --vt-c-black-lighter-x2: rgb(76, 76, 76);
+    --vt-c-black-lighter-x3: rgb(90, 90, 90);
 }
 
 // Значения цветов
@@ -258,6 +259,9 @@ body {
     }
     &.selected {
         background-color: var(--vt-c-black-lighter-x2);
+        &:hover {
+            background-color: var(--vt-c-black-lighter-x3);
+        }
     }
 }
 
@@ -278,6 +282,7 @@ body {
     .content {
         padding-left: 12px;
         height: fit-content;
+        transform: translateY(-2px);
     }
     h1 {
         color: #f8f8f8;
@@ -380,7 +385,9 @@ body {
     min-width: 100%;
     height: fit-content;
     padding: 0px 20px 8px 20px;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     h1 {
         font-size: 1.75em;
     }
@@ -628,11 +635,14 @@ button#login {
 .app_wrapper.light {
     background-color: white;
     .chat {
-        &.selected {
-            background-color: #bdbdbd;
-        }
         &:hover {
-            background-color: #c4c4c4;
+            background-color: #dadada;
+        }
+        &.selected {
+            background-color: #c8c8c8;
+            &:hover {
+                background-color: #bababa;
+            }
         }
     }
     .chatlist_menu,
@@ -643,9 +653,9 @@ button#login {
         p,
         .message {
             color: black;
-            &:hover {
-                background-color: #d8d8d8;
-            }
+        }
+        .message:hover {
+            background-color: rgba($color: black, $alpha: 0.05);
         }
         img {
             opacity: 70%;
@@ -653,14 +663,14 @@ button#login {
         }
     }
     .chatlist_footer {
-        background-color: #c4c4c4;
         div {
             color: black;
         }
     }
     .typeline,
     .chat_header,
-    .chatlist_header {
+    .chatlist_header,
+    .chatlist_footer {
         background-color: #e2e2e2;
         input {
             background-color: white;
