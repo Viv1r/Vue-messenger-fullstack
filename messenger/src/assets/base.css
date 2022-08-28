@@ -75,8 +75,8 @@ body {
   padding: 1%;
   display: -ms-grid;
   display: grid;
-  -ms-grid-columns: 400px auto 48px;
-      grid-template-columns: 400px auto 48px;
+  -ms-grid-columns: 420px auto 48px;
+      grid-template-columns: 420px auto 48px;
   -webkit-column-gap: 1%;
           column-gap: 1%;
 }
@@ -111,11 +111,18 @@ body {
   font-size: 2em;
 }
 
-.chatlist {
+.chatlist,
+.chatlist_allchats {
   width: 100%;
   height: auto;
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.chatlist_allchats .chat {
+  color: white;
+  font-size: 1.5em;
+  padding-left: 16px;
 }
 
 .chatlist_menu {
@@ -144,6 +151,10 @@ body {
 
 .chatlist_menu.maxed .chat {
   height: 96px;
+}
+
+.chatlist_menu.maxed .chat.minimized {
+  height: 72px;
 }
 
 .chatlist_wrapper {
@@ -347,6 +358,11 @@ body {
 
 .chat.selected:hover {
   background-color: var(--vt-c-black-lighter-x3);
+}
+
+.chat.minimized .profile_picture {
+  border-radius: 50%;
+  margin-right: 16px;
 }
 
 .chat_info {
@@ -683,6 +699,16 @@ button#login:hover {
           align-items: center;
 }
 
+.basic_screen .changetheme_button {
+  position: absolute;
+  right: auto;
+  left: auto;
+  top: auto;
+  bottom: auto;
+  -webkit-transform: translateX(300px) translateY(-200px);
+          transform: translateX(300px) translateY(-200px);
+}
+
 .register_form,
 .login_form {
   max-width: 500px;
@@ -879,6 +905,23 @@ button#login:hover {
 
 .app_wrapper.light {
   background-color: white;
+}
+
+.app_wrapper.light .welcome_screen,
+.app_wrapper.light .register_form,
+.app_wrapper.light .login_form {
+  background-color: transparent;
+  color: black;
+}
+
+.app_wrapper.light .welcome_screen .field_wrapper,
+.app_wrapper.light .register_form .field_wrapper,
+.app_wrapper.light .login_form .field_wrapper {
+  color: black;
+}
+
+.app_wrapper.light .chat {
+  color: black;
 }
 
 .app_wrapper.light .chat:hover {

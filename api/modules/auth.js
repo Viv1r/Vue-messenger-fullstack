@@ -6,27 +6,48 @@ const SQLDATA = JSON.parse(
     fs.readFileSync('cfg/sqlcfg.json')
 );
 
-const sql = mysql.createConnection(SQLDATA);
+const sql = mysql.createConnection({
+    ...SQLDATA,
+    database: 'messenger'
+});
 
-const [USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH] = [5, 24],
-      [PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH] = [8, 32],
-      [DISPLAYNAME_MIN_LENGTH, DISPLAYNAME_MAX_LENGTH] = [3, 16];
+const reqs = {
+    username: {
+        title: 'username',
+        min_length: 4,
+        max_length: 24
+    },
+    password: {
+        title: 'password',
+        min_length: 8,
+        max_length: 32
+    },
+    displayName: {
+        title: 'name',
+        min_length: 3,
+        max_length: 16
+    }
+}
 
 function register(username, password, displayName, success, error) {
     sql.query(
         `SELECT id FROM users WHERE username = '${username}'`,
         (err, result) => {
+            [reqs.username.value, reqs.password.value, reqs.displayName.value]
+            = [username, password, displayName];
 
             // Проверка условий для регистрации
             let troubles = [];
+            
             if (result.length)
                 troubles.push("This username is taken!");
-            if (username.length < USERNAME_MIN_LENGTH || username.length > USERNAME_MAX_LENGTH)
-                troubles.push("The username doesn't match the requirements!");
-            if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH)
-                troubles.push("The password doesn't match the requirements!");
-            if (displayName.length < DISPLAYNAME_MIN_LENGTH || displayName.length > DISPLAYNAME_MAX_LENGTH)
-                troubles.push("The name doesn't match the requirements!");
+            
+            for (let elem of [reqs.username, reqs.password, reqs.displayName]) {
+                console.log(elem);
+                if (elem.value.length < elem.min_length || elem.value.length > elem.max_length) {
+                    troubles.push(`The ${elem.title} doesn't match the requirements! (${elem.min_length} - ${elem.max_length} characters)`);
+                }
+            }
             
             if (troubles.length) {
                 error({ status: 'ERROR', errors: troubles });

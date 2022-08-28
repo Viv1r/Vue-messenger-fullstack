@@ -18,16 +18,26 @@ app.use(cookieParser());
 app.use(cors());
 
 
-const messagesQueue = []; // Сюда будут попадать новые сообщения на время, чтобы отсылать их прямо из этого массива, не отсылаясь к БД
+const messagesQueue = {}; // Сюда будут попадать новые сообщения на время, чтобы отсылать их прямо из этого массива, не отсылаясь к БД
 
 function addToQueue(message) {
-    let index = messagesQueue.push(message) - 1;
-    console.log('added to queue\n', message);
-    console.log('queue length:', messagesQueue.length);
-    setTimeout(() => {
-        if (messagesQueue[index])
-            messagesQueue.splice(index, 1);
-    }, 20000);
+    let recipient = message.recipientID;
+    if (!recipient)
+        return;
+    delete message.recipient;
+
+    console.log('Progress');
+
+    if (!messagesQueue[recipient])
+        messagesQueue[recipient] = {messages: [], timer: 0};
+    
+    messagesQueue[recipient].messages.push(message);
+    console.log(messagesQueue);
+
+    clearTimeout(messagesQueue[recipient].timer);
+    messagesQueue[recipient].timer = setTimeout(() => {
+        delete messagesQueue[recipient];
+    }, 10000);
 }
 
 
@@ -39,8 +49,9 @@ const SQLDATA = JSON.parse(
 
 const sql = mysql.createConnection(
     {
-        multipleStatements: true,
-        ...SQLDATA
+        ...SQLDATA,
+        database: 'messenger',
+        multipleStatements: true
     }
 );
 
@@ -64,7 +75,6 @@ app.post('/getchats', (req, res) => {
         res.end();
         return;
     }
-    console.log('user connected with token: ' + hash);
     try {
         sql.query(
             `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
@@ -72,36 +82,62 @@ app.post('/getchats', (req, res) => {
                 @UserID as userID,
                 IF(temp.sender_id = @UserID, temp.recipient_id, temp.sender_id) AS chatID,
                 (SELECT display_name FROM users WHERE id = chatID) AS chatName,
+                temp.id AS messageID,
                 users.id AS senderID,
                 users.display_name AS sender,
                 temp.message_text AS text,
-                temp.datetime,
+                DATE_FORMAT(temp.datetime, '%d.%m.%y %h:%i') AS datetime,
                 temp.readmark
             FROM (
-                SELECT sender_id, recipient_id, message_text, datetime, readmark
+                SELECT id, sender_id, recipient_id, message_text, datetime, readmark
                 FROM messages
-                WHERE recipient_id = @UserID OR sender_id = @UserID ORDER BY datetime
+                WHERE recipient_id = @UserID OR sender_id = @UserID ORDER BY id
             ) AS temp
             JOIN users ON users.id = temp.sender_id`,
             (err, result) => {
-                messagesQueue.forEach((elem, index) => {
-                    if (elem.recipientID == result[1].userID) {
-                        messagesQueue.splice(index, 1);
+                delete messagesQueue.userID;
+
+                let final = [];
+                let indexes = {}; // Словарь с индексами чатов, формат "индекс - айди", чтобы не было много лишних итераций цикла
+
+                result[1].forEach(message => {
+                    let chatID = message.chatID,
+                        raiseUnreadCount = !message.readmark && message.senderID === message.chatID;
+                    
+                    let messageCut = {
+                        id: message.messageID,
+                        senderID: message.senderID,
+                        sender: message.sender,
+                        text: message.text,
+                        datetime: message.datetime
+                    };
+
+                    if (indexes.hasOwnProperty(chatID)) {
+                        let index = indexes[chatID];
+                        if (raiseUnreadCount)
+                            final[index].unreadCount++;
+                        final[index].messages.push(messageCut);
+                        return;
                     }
-                });
-                let final = {};
-                result[1].forEach(elem => {
-                    let chatID = elem.chatID;
-                    final[chatID] = final[chatID] || {name: elem.chatName, messages: [], unreadCount: 0};
-                    if (!elem.readmark && elem.senderID === elem.chatID)
-                        final[chatID].unreadCount++;
-                    final[chatID].messages.push({
-                        senderID: elem.senderID,
-                        sender: elem.sender,
-                        text: elem.text,
-                        datetime: elem.datetime
+
+                    for (let index in final) {
+                        if (final[index].id != chatID)
+                            continue;
+                        if (raiseUnreadCount)
+                            final[index].unreadCount++;
+                        final[index].messages.push(messageCut);
+                        indexes[chatID] = index;
+                        return;
+                    }
+
+                    final.push({
+                        id: chatID,
+                        name: message.chatName,
+                        messages: [messageCut],
+                        unreadCount: raiseUnreadCount ? 1 : 0
                     });
                 });
+
                 res.status(200).json(final);
                 res.end();
             }
@@ -119,41 +155,29 @@ app.post('/seekMessages', (req, res) => {
     sql.query(
         `SELECT id FROM users WHERE cookie_hash = '${req.cookies.userhash}' LIMIT 1`,
         (err, result) => {
-            let userID = Number(result[0].id);
-            if (!userID) {
+            if (!result[0]) {
                 res.clearCookie('userhash');
                 res.status(200).json({status: 'LOGOUT'});
                 res.end();
                 return;
             }
+            let userID = Number(result[0].id);
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                let check = messagesQueue.map((elem, index) => {
-                    if (elem.recipientID === id)
-                        return messagesQueue.indexOf(elem);
-                })
-                .filter(elem => typeof(elem) == 'number');
-                if (check.length) {
-                    console.log('check:', check, '\nqueue:', messagesQueue);
-                    clearInterval(interval);
+                if (messagesQueue[id] && messagesQueue[id].messages) {
                     clearTimeout(timeout);
-                    let result = [];
-                    check.forEach(elem => {
-                        result.push(
-                            messagesQueue.splice(elem, 1)[0]
-                        );
-                    });
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: result});
+                    clearInterval(interval);
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages});
                     res.end();
-                    console.log('result', result, '\nsent to id', id);
+                    delete messagesQueue[id];
                 }
             }, 250);
             timeout = setTimeout(() => {
                 clearInterval(interval);
                 res.status(200).json({status: 'NO_NEW_MESSAGES'});
                 res.end();
-            }, 10000);
+            }, 20000);
             let hash = req.cookies.userhash;
         }
     )
@@ -169,11 +193,16 @@ app.post('/readchat', (req, res) => {
         WHERE sender_id = ${chatID}
         AND recipient_id = (SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1)`,
         (err, result) => {
-            if (result.affectedRows) {
-                res.status(200).json({status: 'READ'});
-                res.end();
-            } else {
-                res.status(200).json({status: 'NOT_READ'});
+            try {
+                if (result.affectedRows) {
+                    res.status(200).json({status: 'READ'});
+                    res.end();
+                } else {
+                    res.status(200).json({status: 'NOT_READ'});
+                    res.end();
+                }
+            } catch {
+                res.status(200).json({status: 'NOT_READ', error: err});
                 res.end();
             }
         }
@@ -277,14 +306,20 @@ app.post('/sendmessage', (req, res) => {
             sql.query(
                 `INSERT INTO messages (sender_id, recipient_id, message_text)
                 VALUES (${senderID}, ${recipient}, '${message}');
-                SELECT users.display_name AS sender, messages.message_text AS text, messages.datetime
+                SELECT messages.id,
+                users.display_name AS sender,
+                messages.message_text AS text,
+                DATE_FORMAT(messages.datetime, '%d.%m.%y %h:%i') AS datetime
                 FROM messages JOIN users ON messages.sender_id = users.id
                 WHERE sender_id = ${senderID} AND recipient_id = ${recipient}
-                ORDER BY datetime DESC LIMIT 1`,
+                ORDER BY id DESC LIMIT 1`,
                 (err, result) => {
-                    if (result[0].affectedRows) {
+                    if (result && result[0].affectedRows) {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
-                        addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                        if (senderID != recipient) {
+                            addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                            console.log('Added to queue');
+                        }
                     }
                     else {
                         res.status(200).json({status: 'NOT_SENT', errors: ['Server error']});
@@ -319,3 +354,35 @@ app.post('/cookieauth', (req, res) => {
         }
     )
 });
+
+// Получение всех чатов
+
+app.post('/getallchats', (req, res) => {
+    let hash = req.cookies.userhash;
+    if (!hash) {
+        res.clearCookie('userhash');
+        res.status(200).json({ status: 'USER_NOT_FOUND' });
+        res.end();
+        return;
+    }
+    try {
+        sql.query(
+            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
+            SELECT id, display_name AS name FROM users WHERE id != @UserID`,
+            (err, result) => {
+                let chats = result[1];
+                if (chats.length) {
+                    res.status(200).json({status: 'GOT_CHATS', chats: chats});
+                    res.end();
+                } else {
+                    res.status(200).json({status: 'ERROR'});
+                    res.end();
+                }
+            }
+        );
+    } catch (err) {
+        res.status(200).json([]);
+        res.end();
+        console.log('error: ' + err);
+    }
+})

@@ -1,14 +1,10 @@
 const URL = 'api/getchats';
 
 async function load(callback) {
-    await fetch(URL, {
-        method: 'POST'
-    })
-    .then(data => data.json())
-    .then(result => {
-        callback(result);
-        console.log(result);
-    });
+    const response = await fetch(URL, {method: 'POST'});
+    const data = await response.json();
+    callback(data);
+    console.log(data);
 }
 
 export default {
