@@ -10,7 +10,7 @@ async function register(app) {
         return;
     }
     app.loading = true;
-    await fetch('api/register', {
+    await fetch('register', {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -40,7 +40,7 @@ async function login(app) {
         return;
     }
     app.loading = true;
-    await fetch('api/login', {
+    await fetch('login', {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -60,7 +60,7 @@ async function login(app) {
 }
 
 async function logout(app) {
-    await fetch('api/logout', {
+    await fetch('logout', {
         method: 'POST'
     })
     .then(data => data.json())
@@ -73,7 +73,7 @@ async function logout(app) {
 }
 
 async function cookieAuth(setScreen) {
-    await fetch('api/cookieauth', {
+    await fetch('cookieauth', {
         method: 'POST'
     })
     .then(data => data.json())

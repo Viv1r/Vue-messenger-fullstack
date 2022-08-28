@@ -140,7 +140,7 @@ export default {
             }
         },
         async readChat(id) {
-            const response = await fetch('api/readchat', {
+            const response = await fetch('readchat', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -173,12 +173,8 @@ export default {
             auth.logout(this);
             localStorage.clear();
         },
-		updateChats(arg) {
-			console.log('Update chats');
-		},
         sortChats() {
             if (this.chats.length >= 2) {
-                console.log('sorting chats');
                 this.chats == this.chats.sort((a, b) => {
                     return a.messages.length && b.messages.length
                         ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
@@ -187,7 +183,7 @@ export default {
             }
         },
         async seekMessages() {
-            const response = await fetch('api/seekmessages', {method: 'POST'});
+            const response = await fetch('seekmessages', {method: 'POST'});
             const data = await response.json();
             if (data.status == 'LOGOUT') {
                 localStorage.clear();
@@ -195,7 +191,6 @@ export default {
                 app.chats = {};
                 return;
             }
-            console.log(data);
             if (data.status == 'GOT_MESSAGES' && data.messages) {
                 data.messages.forEach(elem => {
                     let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime];
@@ -226,7 +221,7 @@ export default {
             this.seekMessages();
         },
         async getAllChats() {
-            const response = await fetch('api/getallchats', {method: 'POST'});
+            const response = await fetch('getallchats', {method: 'POST'});
             const data = await response.json();
             if (data.status = 'GOT_CHATS') {
                 this.allChats = JSON.parse(JSON.stringify(data.chats));

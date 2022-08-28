@@ -162,7 +162,7 @@ export default {
             if (messagesWrapper = document.querySelector('.messages_wrapper'))
                 messagesWrapper.scrollTop = 0;
             
-            const response = await fetch('api/sendmessage', {
+            const response = await fetch('sendmessage', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
