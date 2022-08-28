@@ -6,30 +6,24 @@
 
 <div :class="'app_wrapper' + (lightTheme ? ' light' : '')">
 	<div v-if="screen == 'chats'" class="window">
-		<chats-display
+		<ChatsDisplay
 			:chats="chats"
             :allChats="allChats"
 			:currentChat="currentChat"
+            :chatIndex="chatIndex"
 			:miniMode="miniMode"
 			:lightTheme="lightTheme"
             :setChats="(data) => {
                 chats = data;
                 chatsLoaded = true
             }"
+            :addChat="(obj) => chats.unshift(obj)"
             :chatsLoaded="chatsLoaded"
             @getAllChats="getAllChats"
             @seekMessagesStart="seekMessages"
             @goToChat="goToChat"
             @logout="logout"
-            @addMessage="(chatID, senderID, name, text, datetime) =>
-                this.chats[chatID].messages.push(
-                    {
-                        senderID: senderID,
-                        sender: name,
-                        text: text,
-                        datetime: datetime
-                    }
-                )"
+            @getMessage="getMessage"
 			@setLightTheme="(param) => lightTheme = param"
 		/>
 	</div>
@@ -89,6 +83,10 @@
 			</div>
 			<button class="button_return" @click="screen = 'welcome'">Back</button>
 		</div>
+        <ChangeTheme v-if="screen"
+            @changeLightTheme="lightTheme = !lightTheme"
+            :lightTheme="lightTheme"
+        />
 	</div>
 </div>
 </template>
@@ -96,11 +94,12 @@
 <script>
 
 import ChatsDisplay from './components/ChatsDisplay.vue';
+import ChangeTheme from './components/ChangeTheme.vue';
 import auth from './modules/auth.js';
 import authForms from './modules/auth_forms.js'
 export default {
 	components: {
-		ChatsDisplay
+		ChatsDisplay, ChangeTheme
 	},
     data() {
         return {
@@ -129,15 +128,26 @@ export default {
         }, 100);
         auth.cookieAuth((screen) => this.screen = screen);
     },
+    beforeUpdate() {
+        if (this.chats.length >= 2) {
+            this.chats == this.chats.sort((a, b) => {
+                return a.messages && b.messages
+                    ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
+                    : 0;
+            });
+        }
+    },
     methods: {
         goToChat(id) {
+            if (id != null && !id)
+                return;
             this.currentChat = id;
             if (id) {
                 this.readChat(id);
             }
         },
-        readChat(id) {
-            fetch('api/readchat', {
+        async readChat(id) {
+            const response = await fetch('api/readchat', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -146,13 +156,11 @@ export default {
                 body: JSON.stringify({
                     chatID: id
                 })
-            })
-            .then(data => data.json())
-            .then(result => {
-                if (result.status == 'READ') {
-                    this.chats[id].unreadCount = 0;
-                }
             });
+            const data = await response.json();
+            if (data.status == 'READ') {
+                this.chats[this.chatIndex(id)].unreadCount = 0;
+            }
         },
         regScreen() {
             authForms.loadReg(this);
@@ -175,44 +183,68 @@ export default {
 		updateChats(arg) {
 			console.log('Update chats');
 		},
-        seekMessages() {
-            fetch('api/seekmessages', {
-                method: 'POST'
-            })
-            .then(data => data.json())
-            .then(result => {
-                if (result.status == 'LOGOUT') {
-                    return logout();
-                }
-                console.log(result);
-                if (result.status == 'GOT_MESSAGES' && result.messages.length) {
-                    result.messages.forEach(elem => {
-                        console.log(elem);
-                        let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime]
-                        if (senderID && sender) {
-                            this.chats[senderID] = this.chats[senderID] || { name: sender, messages: [], unreadCount: 0 };
-                            this.chats[senderID].messages.push({
-                                senderID: senderID,
-                                sender: sender,
-                                text: text || '',
-                                datetime: datetime || 'Out of time'
+        async seekMessages() {
+            const response = await fetch('api/seekmessages', {method: 'POST'});
+            const data = await response.json();
+            if (data.status == 'LOGOUT') {
+                localStorage.clear();
+                app.currentChat = null;
+                app.chats = {};
+                return;
+            }
+            console.log(data);
+            if (data.status == 'GOT_MESSAGES' && data.messages) {
+                data.messages.forEach(elem => {
+                    let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime];
+                    if (this.currentChat == senderID) {
+                        this.readChat(senderID);
+                    }
+                    if (senderID && sender) {
+                        if (!this.chats[this.chatIndex(senderID)]) {
+                            this.chats.unshift({
+                                id: senderID,
+                                name: sender,
+                                messages: [],
+                                unreadCount: 0
                             });
                         }
-                    });
-                }
-                this.seekMessages();
-            });
+                        let thisChat = this.chats[this.chatIndex(senderID)];
+                        thisChat.messages.push({
+                            senderID: senderID,
+                            sender: sender,
+                            text: text || '',
+                            datetime: datetime || 'Out of time'
+                        });
+                        thisChat.unreadCount++;
+                    }
+                });
+            }
+            this.seekMessages();
         },
-        getAllChats() {
-            fetch('api/getallchats', {
-                method: 'POST'
-            })
-            .then(data => data.json())
-            .then(result => {
-                if (result.status = 'GOT_CHATS') {
-                    this.allChats = JSON.parse(JSON.stringify(result.chats));
+        async getAllChats() {
+            const response = await fetch('api/getallchats', {method: 'POST'});
+            const data = await response.json();
+            if (data.status = 'GOT_CHATS') {
+                this.allChats = JSON.parse(JSON.stringify(result.chats));
+            }
+        },
+        getMessage(chatID, senderID, name, text, datetime) {
+            this.chats[this.chatIndex(chatID)].messages.push(
+                {
+                    senderID: senderID,
+                    sender: name,
+                    text: text,
+                    datetime: datetime
                 }
-            });
+            )
+        },
+        chatIndex(id) {
+            for (let index in this.chats) {
+                if (this.chats[index] && this.chats[index].id == id) {
+                    return index;
+                }
+            }
+            return null;
         }
     }
 }
