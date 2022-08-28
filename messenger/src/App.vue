@@ -15,10 +15,12 @@
 			:lightTheme="lightTheme"
             :setChats="(data) => {
                 chats = data;
-                chatsLoaded = true
+                chatsLoaded = true;
+                this.sortChats();
             }"
             :addChat="(obj) => chats.unshift(obj)"
             :chatsLoaded="chatsLoaded"
+            @sortChats="sortChats"
             @getAllChats="getAllChats"
             @seekMessagesStart="seekMessages"
             @goToChat="goToChat"
@@ -128,15 +130,6 @@ export default {
         }, 100);
         auth.cookieAuth((screen) => this.screen = screen);
     },
-    beforeUpdate() {
-        if (this.chats.length >= 2) {
-            this.chats == this.chats.sort((a, b) => {
-                return a.messages && b.messages
-                    ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
-                    : 0;
-            });
-        }
-    },
     methods: {
         goToChat(id) {
             if (id != null && !id)
@@ -183,6 +176,16 @@ export default {
 		updateChats(arg) {
 			console.log('Update chats');
 		},
+        sortChats() {
+            if (this.chats.length >= 2) {
+                console.log('sorting chats');
+                this.chats == this.chats.sort((a, b) => {
+                    return a.messages.length && b.messages.length
+                        ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
+                        : a.messages.length || b.messages.length * -1
+                });
+            }
+        },
         async seekMessages() {
             const response = await fetch('api/seekmessages', {method: 'POST'});
             const data = await response.json();
@@ -218,6 +221,7 @@ export default {
                         thisChat.unreadCount++;
                     }
                 });
+                this.sortChats();
             }
             this.seekMessages();
         },
@@ -225,12 +229,13 @@ export default {
             const response = await fetch('api/getallchats', {method: 'POST'});
             const data = await response.json();
             if (data.status = 'GOT_CHATS') {
-                this.allChats = JSON.parse(JSON.stringify(result.chats));
+                this.allChats = JSON.parse(JSON.stringify(data.chats));
             }
         },
-        getMessage(chatID, senderID, name, text, datetime) {
+        getMessage(id, chatID, senderID, name, text, datetime) {
             this.chats[this.chatIndex(chatID)].messages.push(
                 {
+                    id: id,
                     senderID: senderID,
                     sender: name,
                     text: text,

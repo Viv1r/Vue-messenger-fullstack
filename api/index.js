@@ -165,12 +165,12 @@ app.post('/seekMessages', (req, res) => {
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                if (messagesQueue.hasOwnProperty(id)) {
+                if (messagesQueue[id] && messagesQueue[id].messages) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: result});
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages});
                     res.end();
-                    delete messagesQueue.id;
+                    delete messagesQueue[id];
                 }
             }, 250);
             timeout = setTimeout(() => {
@@ -193,11 +193,16 @@ app.post('/readchat', (req, res) => {
         WHERE sender_id = ${chatID}
         AND recipient_id = (SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1)`,
         (err, result) => {
-            if (result.affectedRows) {
-                res.status(200).json({status: 'READ'});
-                res.end();
-            } else {
-                res.status(200).json({status: 'NOT_READ'});
+            try {
+                if (result.affectedRows) {
+                    res.status(200).json({status: 'READ'});
+                    res.end();
+                } else {
+                    res.status(200).json({status: 'NOT_READ'});
+                    res.end();
+                }
+            } catch {
+                res.status(200).json({status: 'NOT_READ', error: err});
                 res.end();
             }
         }

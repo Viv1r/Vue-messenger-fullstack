@@ -139,7 +139,7 @@ export default {
         setCurrentChat: Function,
         chatIndex: Function
     },
-    emits: ['setLightTheme', 'getMessage', 'goToChat', 'logout', 'seekMessagesStart', 'getAllChats'],
+    emits: ['setLightTheme', 'getMessage', 'goToChat', 'logout', 'seekMessagesStart', 'getAllChats', 'sortChats'],
     methods: {
         getLastMessage(chat, length) {
             if (!chat.messages.length)
@@ -174,15 +174,16 @@ export default {
                 })
             });
             const data = await response.json();
-            console.log('data', data);
             if (data.status === 'SENT'){
                 this.$emit('getMessage',
+                    data.id,
                     recipientID,
                     data.senderID,
                     data.sender,
                     data.text,
                     data.datetime
                 );
+                this.$emit('sortChats');
             }
         },
         setDraft(text) {
@@ -202,6 +203,7 @@ export default {
     mounted() {
         loadchats.load(this.setChats);
         this.$emit('seekMessagesStart');
+        this.$emit('sortChats');
     }
 }
 
