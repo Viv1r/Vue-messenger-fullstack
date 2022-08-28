@@ -6,7 +6,10 @@ const SQLDATA = JSON.parse(
     fs.readFileSync('cfg/sqlcfg.json')
 );
 
-const sql = mysql.createConnection(SQLDATA);
+const sql = mysql.createConnection({
+    ...SQLDATA,
+    database: 'messenger'
+});
 
 const [USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH] = [5, 24],
       [PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH] = [8, 32],

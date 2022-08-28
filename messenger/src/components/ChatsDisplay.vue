@@ -2,9 +2,18 @@
 
 <div v-if="miniMode ? (currentChat === null) : (true)" :class="'chatlist_menu' + (miniMode ? ' maxed' : '')">
     <div class="chatlist_header">
-        <h1>Your chats</h1>
+        <h1>{{ allChatsMenu ? 'All chats' : 'Your chats' }}</h1>
     </div>
-    <div v-if="JSON.stringify(chats) != '{}'" class="chatlist">
+    <div v-if="allChatsMenu" class="chatlist_allchats">
+        <div v-for="chat in allChats" class="chat" @click="() => {
+            goToChat(chat.id); 
+            allChatsMenu = false;
+            chats[chat.id] = { name: chat.name, messages: [], unreadCount: 0 };
+        }">
+            {{ chat.name }}
+        </div>
+    </div>
+    <div v-else-if="JSON.stringify(chats) != '{}'" class="chatlist">
         <div class="chatlist_wrapper">
             <div v-for="(chat, index) in chats" :class="'chat' + (currentChat === index ? ' selected' : '')" @click="goToChat(index)">
                 <div class="chat_info">
@@ -24,7 +33,7 @@
         <p>No chats!</p>
     </div>
     <div class="chatlist_footer">
-        <div class="button_new_chat" @click="">
+        <div class="button_new_chat" @click="getAllChats()">
             <img src="/src/assets/new_chat.svg" alt="new_chat">
             New chat
         </div>
@@ -97,12 +106,14 @@ import format from '../modules/format';
 export default {
     data() {
         return {
-            toSend: ""
+            toSend: "",
+            allChatsMenu: false
         }
     },
     el: '#app',
     props: {
         chats: { type: Object, default: {} },
+        allChats: { type: Array, default: [] },
         currentChat: { default: null },
         miniMode: { type: Boolean, default: false },
         lightTheme: { type: Boolean, default: false },
@@ -110,7 +121,7 @@ export default {
         setChats: Function,
         setCurrentChat: Function
     },
-    emits: ['setLightTheme', 'addMessage', 'goToChat', 'logout', 'seekMessagesStart'],
+    emits: ['setLightTheme', 'addMessage', 'goToChat', 'logout', 'seekMessagesStart', 'getAllChats'],
     methods: {
         getLastMessage(chat, length) {
             try {
@@ -163,6 +174,12 @@ export default {
         goToChat(index) {
             this.$emit('goToChat', index);
             this.toSend = localStorage.getItem('draft_' + index) || '';
+        },
+        getAllChats() {
+            this.allChatsMenu = !this.allChatsMenu;
+            if (this.allChatsMenu) {
+                this.$emit('getAllChats');
+            }
         }
     },
     mounted() {

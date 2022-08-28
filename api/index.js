@@ -39,8 +39,9 @@ const SQLDATA = JSON.parse(
 
 const sql = mysql.createConnection(
     {
-        multipleStatements: true,
-        ...SQLDATA
+        ...SQLDATA,
+        database: 'messenger',
+        multipleStatements: true
     }
 );
 
@@ -84,9 +85,9 @@ app.post('/getchats', (req, res) => {
             ) AS temp
             JOIN users ON users.id = temp.sender_id`,
             (err, result) => {
-                messagesQueue.forEach((elem, index) => {
+                messagesQueue.forEach(elem => {
                     if (elem.recipientID == result[1].userID) {
-                        messagesQueue.splice(index, 1);
+                        messagesQueue.splice(messagesQueue.indexOf(elem), 1);
                     }
                 });
                 let final = {};
@@ -119,31 +120,25 @@ app.post('/seekMessages', (req, res) => {
     sql.query(
         `SELECT id FROM users WHERE cookie_hash = '${req.cookies.userhash}' LIMIT 1`,
         (err, result) => {
-            let userID = Number(result[0].id);
-            if (!userID) {
+            if (!result[0]) {
                 res.clearCookie('userhash');
                 res.status(200).json({status: 'LOGOUT'});
                 res.end();
                 return;
             }
+            let userID = Number(result[0].id);
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                let check = messagesQueue.map((elem, index) => {
-                    if (elem.recipientID === id)
-                        return messagesQueue.indexOf(elem);
+                let result = messagesQueue.map(elem => {
+                    if (typeof(elem) == 'object' && elem.recipientID === id) {
+                        clearTimeout(timeout);
+                        return messagesQueue.splice(messagesQueue.indexOf(elem), 1)[0];
+                    }
                 })
-                .filter(elem => typeof(elem) == 'number');
-                if (check.length) {
-                    console.log('check:', check, '\nqueue:', messagesQueue);
+                .filter(elem => typeof(elem) == 'object');
+                if (result.length) {
                     clearInterval(interval);
-                    clearTimeout(timeout);
-                    let result = [];
-                    check.forEach(elem => {
-                        result.push(
-                            messagesQueue.splice(elem, 1)[0]
-                        );
-                    });
                     res.status(200).json({status: 'GOT_MESSAGES', messages: result});
                     res.end();
                     console.log('result', result, '\nsent to id', id);
@@ -284,7 +279,8 @@ app.post('/sendmessage', (req, res) => {
                 (err, result) => {
                     if (result[0].affectedRows) {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
-                        addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                        if (senderID != recipient)
+                            addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
                     }
                     else {
                         res.status(200).json({status: 'NOT_SENT', errors: ['Server error']});
@@ -319,3 +315,36 @@ app.post('/cookieauth', (req, res) => {
         }
     )
 });
+
+// Получение всех чатов
+
+app.post('/getallchats', (req, res) => {
+    let hash = req.cookies.userhash;
+    if (!hash) {
+        res.clearCookie('userhash');
+        res.status(200).json({ status: 'USER_NOT_FOUND' });
+        res.end();
+        return;
+    }
+    console.log('user connected with token: ' + hash);
+    try {
+        sql.query(
+            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
+            SELECT id, display_name AS name FROM users WHERE id != @UserID`,
+            (err, result) => {
+                let chats = result[1];
+                if (chats.length) {
+                    res.status(200).json({status: 'GOT_CHATS', chats: chats});
+                    res.end();
+                } else {
+                    res.status(200).json({status: 'ERROR'});
+                    res.end();
+                }
+            }
+        );
+    } catch (err) {
+        res.status(200).json([]);
+        res.end();
+        console.log('error: ' + err);
+    }
+})

@@ -8,6 +8,7 @@
 	<div v-if="screen == 'chats'" class="window">
 		<chats-display
 			:chats="chats"
+            :allChats="allChats"
 			:currentChat="currentChat"
 			:miniMode="miniMode"
 			:lightTheme="lightTheme"
@@ -16,7 +17,8 @@
                 chatsLoaded = true
             }"
             :chatsLoaded="chatsLoaded"
-            @seekMessagesStart="seekMessages()"
+            @getAllChats="getAllChats"
+            @seekMessagesStart="seekMessages"
             @goToChat="goToChat"
             @logout="logout"
             @addMessage="(chatID, senderID, name, text, datetime) =>
@@ -108,6 +110,7 @@ export default {
             loading: false,
             miniMode: false,
             chats: {},
+            allChats: [],
             chatsLoaded: false,
             registerForm: {},
             registerErrors: [],
@@ -179,8 +182,7 @@ export default {
             .then(data => data.json())
             .then(result => {
                 if (result.status == 'LOGOUT') {
-                    logout();
-                    return;
+                    return logout();
                 }
                 console.log(result);
                 if (result.status == 'GOT_MESSAGES' && result.messages.length) {
@@ -201,6 +203,17 @@ export default {
                 this.seekMessages();
             });
         },
+        getAllChats() {
+            fetch('api/getallchats', {
+                method: 'POST'
+            })
+            .then(data => data.json())
+            .then(result => {
+                if (result.status = 'GOT_CHATS') {
+                    this.allChats = JSON.parse(JSON.stringify(result.chats));
+                }
+            });
+        }
     }
 }
 
