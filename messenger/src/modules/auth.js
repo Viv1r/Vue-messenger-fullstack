@@ -1,6 +1,6 @@
 async function register(app) {
     app.registerErrors = [];
-    let body = {
+    const body = {
         username: app.registerForm.username.value,
         password: app.registerForm.password.value,
         name: app.registerForm.name.value    
@@ -9,29 +9,27 @@ async function register(app) {
         app.registerErrors.push('Some fields are empty!');
         return;
     }
-    app.loading = true;
-    await fetch('api/register', {
+    app.$emit('setLoading', true);
+    const response = await fetch('api/register', {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
-    })
-    .then(data => data.json())
-    .then(result => {
-        app.loading = false;
-        if (result.status === 'REGISTERED') {
-            app.screen = 'chats';
-        } else if (result.status === 'ERROR') {
-            result.errors.forEach(err => app.registerErrors.push(err));
-        }
     });
+    const data = await response.json();
+    app.$emit('setLoading', false);
+    if (data.status == 'REGISTERED') {
+        app.$emit('setScreen', 'chats');
+    } else if (data.status === 'ERROR') {
+        app.registerErrors = data.errors;
+    }
 }
 
 async function login(app) {
     app.loginErrors = [];
-    let body = {
+    const body = {
         username: app.loginForm.username.value,
         password: app.loginForm.password.value
     };
@@ -39,51 +37,46 @@ async function login(app) {
         app.loginErrors.push('Some fields are empty!');
         return;
     }
-    app.loading = true;
-    await fetch('api/login', {
+    app.$emit('setLoading', true);
+    const response = await fetch('api/login', {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
-    })
-    .then(data => data.json())
-    .then(result => {
-        app.loading = false;
-        if (result.status === 'LOGGED_IN') {
-            app.screen = 'chats';
-        } else if (result.status === 'ERROR') {
-            result.errors.forEach(err => app.loginErrors.push(err));
-        }
     });
+    const data = await response.json();
+    app.$emit('setLoading', false);
+    if (data.status == 'LOGGED_IN') {
+        app.$emit('setScreen', 'chats');
+    } else if (data.status === 'ERROR') {
+        app.loginErrors = data.errors;
+    }
 }
 
 async function logout(app) {
-    await fetch('api/logout', {
+    const response = await fetch('api/logout', {
         method: 'POST'
-    })
-    .then(data => data.json())
-    .then(result => {
-        if (result.status = 'LOGGED_OUT')
-            app.loginScreen();
-            app.currentChat = null;
-            app.chats = {};
     });
+    const data = await response.json();
+    if (data.status == 'LOGGED_OUT') {
+        app.screen = 'login';
+        app.currentChat = null;
+        app.chats = {};
+    }
 }
 
 async function cookieAuth(setScreen) {
-    await fetch('api/cookieauth', {
+    const response = await fetch('api/cookieauth', {
         method: 'POST'
-    })
-    .then(data => data.json())
-    .then(result => {
-        if (result.status === 'LOGGED_IN'){
-            setScreen('chats');
-        } else {
-            setScreen('welcome');
-        }
     });
+    const data = await response.json();
+    if (data.status == 'LOGGED_IN') {
+        setScreen('chats');
+    } else {
+        setScreen('welcome');
+    }
 }
 
 export default {

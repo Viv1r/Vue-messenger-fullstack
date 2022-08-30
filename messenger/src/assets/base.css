@@ -705,8 +705,8 @@ button#login:hover {
   left: auto;
   top: auto;
   bottom: auto;
-  -webkit-transform: translateX(300px) translateY(-200px);
-          transform: translateX(300px) translateY(-200px);
+  -webkit-transform: translateX(400%) translateY(-280px);
+          transform: translateX(400%) translateY(-280px);
 }
 
 .register_form,

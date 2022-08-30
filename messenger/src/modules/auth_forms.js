@@ -1,5 +1,5 @@
-function loadRegisterForm(app) {
-    app.registerForm = {
+function loadRegisterForm() {
+    return {
         username: {
             title: "Username",
             type: "text",
@@ -21,11 +21,10 @@ function loadRegisterForm(app) {
             value: {a: 'a'}
         }
     };
-    app.registerErrors = [];
 }
 
-function loadLoginForm(app) {
-    app.loginForm = {
+function loadLoginForm() {
+    return {
         username: {
             title: "Username",
             type: "text",
@@ -37,7 +36,6 @@ function loadLoginForm(app) {
             value: ""
         }
     };
-    app.loginErrors = [];
 }
 
 export default {
