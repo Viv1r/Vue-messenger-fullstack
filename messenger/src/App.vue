@@ -6,28 +6,30 @@
 
 <div :class="'app_wrapper' + (lightTheme ? ' light' : '')">
 	<div v-if="screen == 'chats'" class="window">
-		<ChatsDisplay
-			:chats="chats"
+        <ChatList
+            :chats="chats"
             :allChats="allChats"
-			:currentChat="currentChat"
+            :currentChatID="currentChatID"
+            :miniMode="miniMode"
+            :addChat="addChat"
             :chatIndex="chatIndex"
-			:miniMode="miniMode"
-			:lightTheme="lightTheme"
-            :setChats="data => {
-                chats = data;
-                chatsLoaded = true;
-                this.sortChats();
-            }"
-            :addChat="obj => chats.unshift(obj)"
-            :chatsLoaded="chatsLoaded"
-            @sortChats="sortChats"
-            @getAllChats="getAllChats"
-            @seekMessagesStart="seekMessages"
-            @goToChat="goToChat"
+            @goToChat="id => currentChatID = id"
             @logout="logout"
+            @getAllChats="getAllChats"
+        />
+		<ChatsDisplay
+			:currentChat="chats[chatIndex(currentChatID)]"
+			:currentChatID="currentChatID"
+			:miniMode="miniMode"
+            :chatsLoaded="chatsLoaded"
+            @goToChat="goToChat"
             @getMessage="getMessage"
-			@setLightTheme="param => lightTheme = param"
+            @mounted="loadChats"
 		/>
+        <ChangeTheme
+            @changeLightTheme="lightTheme = !lightTheme"
+            :lightTheme="lightTheme"
+        />
 	</div>
 	<div v-else class="basic_screen">
 		<div v-if="screen == 'welcome'" class="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
@@ -59,28 +61,35 @@
 import RegisterForm from './components/RegisterForm.vue';
 import LoginForm from './components/LoginForm.vue';
 import ChatsDisplay from './components/ChatsDisplay.vue';
+import ChatList from './components/ChatList.vue';
 import ChangeTheme from './components/ChangeTheme.vue';
+
 import auth from './modules/auth.js';
+import loadchats from './modules/load_chats.js';
+import ChatList1 from './components/ChatList.vue';
+
 export default {
 	components: {
-        ChatsDisplay,
-        ChangeTheme,
-        RegisterForm,
-        LoginForm
-    },
+    ChatList,
+    ChatsDisplay,
+    ChangeTheme,
+    RegisterForm,
+    LoginForm,
+    ChatList1
+},
     data() {
         return {
-            currentChat: null,
             screen: null,
-            lightTheme: false,
             loading: false,
             miniMode: false,
+            lightTheme: false,
             chats: [],
             allChats: [],
+            currentChatID: null,
             chatsLoaded: false,
         };
     },
-    mounted() {
+    beforeMount() {
         window.addEventListener("keydown", (e) => {
             if (this.currentChat && e.key == "Escape") {
                 this.currentChat = null;
@@ -89,7 +98,7 @@ export default {
         const checkWindowSize = setInterval(() => {
             this.miniMode = window.innerWidth < 1000;
         }, 100);
-        auth.cookieAuth((screen) => this.screen = screen);
+        auth.cookieAuth(screen => this.screen = screen);
     },
     methods: {
         goToChat(id) {
@@ -119,13 +128,18 @@ export default {
         logout() {
             auth.logout(this);
             localStorage.clear();
+            this.chatsLoaded = false;
+            this.currentChatID = null;
         },
-		updateChats(arg) {
-			console.log('Update chats');
-		},
+        async loadChats() {
+            await loadchats.load(data => this.chats = data);
+            this.seekMessages();
+        },
+        addChat(chat) {
+            this.chats.unshift(chat);
+        },
         sortChats() {
             if (this.chats.length >= 2) {
-                console.log('sorting chats');
                 this.chats == this.chats.sort((a, b) => {
                     return a.messages.length && b.messages.length
                         ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
@@ -142,7 +156,6 @@ export default {
                 app.chats = {};
                 return;
             }
-            console.log(data);
             if (data.status == 'GOT_MESSAGES' && data.messages) {
                 data.messages.forEach(elem => {
                     let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
@@ -171,7 +184,9 @@ export default {
                 });
             }
             this.sortChats();
-            this.seekMessages();
+            if (this.screen == 'chats') {
+                this.seekMessages();
+            }
         },
         async getAllChats() {
             const response = await fetch('api/getallchats', {method: 'POST'});
@@ -189,7 +204,8 @@ export default {
                     text: text,
                     datetime: datetime
                 }
-            )
+            );
+            this.sortChats();
         },
         chatIndex(id) {
             for (let index in this.chats) {

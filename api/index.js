@@ -134,7 +134,13 @@ app.post('/getchats', (req, res) => {
                         unreadCount: raiseUnreadCount ? 1 : 0
                     });
                 });
-
+                for (let chat of final) {
+                    let filepath = __dirname + `/media/userpics/${chat.id}.jpg`;
+                    if (fs.existsSync(path.resolve(filepath))) {
+                        res.sendFile(filepath);
+                        console.log(`Sent ${filepath}!`);
+                    }
+                }
                 res.status(200).json(final);
                 res.end();
             }
