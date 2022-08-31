@@ -124,7 +124,8 @@ export default {
     data() {
         return {
             toSend: "",
-            allChatsMenu: false
+            allChatsMenu: false,
+            MESSAGE_MAX_LENGTH: 500
         }
     },
     props: {
@@ -154,7 +155,7 @@ export default {
         },
         async sendMessage() {
             let [recipientID, message] = [this.currentChat, this.toSend];
-            if (!recipientID || message.length < 1 || message.length > 500)
+            if (!recipientID || message.length < 1 || message.length > MESSAGE_MAX_LENGTH)
                 return;
             this.toSend = '';
             localStorage.removeItem('draft_' + recipientID);

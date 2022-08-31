@@ -2,13 +2,13 @@
 
 <div class="register_form"> <!-- РЕГИСТРАЦИЯ -->
     <h1>Register</h1>
-    <div class="field_wrapper" v-for="(inp, index) in registerForm">
+    <div class="field_wrapper" v-for="(inp, key) in registerForm">
         <template v-if="inp.type != 'image'">
             {{ inp.title }}
             <input
                 :class="'reg_inp_'+inp.type"
                 :type="inp.type"
-                :name="index"
+                :name="key"
                 v-model="inp.value"
                 @keydown.enter="register()"
             >
@@ -24,7 +24,7 @@
             </label>
         </template>
     </div>
-    <div v-for="err in registerErrors" class="auth_error">{{ err }}</div>
+    <div v-for="err in errors" class="auth_error">{{ err }}</div>
     <div class="register_button_wrapper">
         <button id="register" @click="register()">Register</button>
     </div>
@@ -35,18 +35,34 @@
 
 <script>
 import auth from '../modules/auth.js';
-import authForms from '../modules/auth_forms.js'
 
 export default {
     data() {
         return {
-            registerForm: {},
-            registerErrors: [],
+            registerForm: {
+                username: {
+                    title: "Username",
+                    type: "text",
+                    value: ""
+                },
+                password: {
+                    title: "Password",
+                    type: "password",
+                    value: ""
+                },
+                name: {
+                    title: "Profile name",
+                    type: "text",
+                    value: ""
+                },
+                profilePicture: {
+                    title: "Profile picture",
+                    type: "image",
+                    value: {a: 'a'}
+                }
+            },
+            errors: [],
         }
-    },
-    beforeMount() {
-        this.registerForm = authForms.loadReg();
-        this.registerErrors = [];
     },
     emits: ['setLoading', 'setScreen'],
     methods: {

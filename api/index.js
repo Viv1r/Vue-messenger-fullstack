@@ -26,18 +26,15 @@ function addToQueue(message) {
         return;
     delete message.recipient;
 
-    console.log('Progress');
-
     if (!messagesQueue[recipient])
         messagesQueue[recipient] = {messages: [], timer: 0};
     
     messagesQueue[recipient].messages.push(message);
-    console.log(messagesQueue);
 
     clearTimeout(messagesQueue[recipient].timer);
     messagesQueue[recipient].timer = setTimeout(() => {
         delete messagesQueue[recipient];
-    }, 10000);
+    }, 15000);
 }
 
 
@@ -95,10 +92,10 @@ app.post('/getchats', (req, res) => {
             ) AS temp
             JOIN users ON users.id = temp.sender_id`,
             (err, result) => {
-                delete messagesQueue.userID;
+                try { delete messagesQueue[result[1][0].userID]; } catch {}
 
                 let final = [];
-                let indexes = {}; // Словарь с индексами чатов, формат "индекс - айди", чтобы не было много лишних итераций цикла
+                let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
 
                 result[1].forEach(message => {
                     let chatID = message.chatID,
@@ -112,7 +109,7 @@ app.post('/getchats', (req, res) => {
                         datetime: message.datetime
                     };
 
-                    if (indexes.hasOwnProperty(chatID)) {
+                    if (indexes[chatID]) {
                         let index = indexes[chatID];
                         if (raiseUnreadCount)
                             final[index].unreadCount++;
@@ -145,7 +142,6 @@ app.post('/getchats', (req, res) => {
     } catch (err) {
         res.status(200).json([]);
         res.end();
-        console.log('error: ' + err);
     }
 });
 
@@ -165,12 +161,11 @@ app.post('/seekMessages', (req, res) => {
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                if (messagesQueue[id] && messagesQueue[id].messages) {
+                if (messagesQueue[id] && messagesQueue[id].messages && messagesQueue[id].messages.length) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages});
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages.splice(0)});
                     res.end();
-                    delete messagesQueue[id];
                 }
             }, 250);
             timeout = setTimeout(() => {
@@ -318,7 +313,6 @@ app.post('/sendmessage', (req, res) => {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
                         if (senderID != recipient) {
                             addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
-                            console.log('Added to queue');
                         }
                     }
                     else {
@@ -383,6 +377,5 @@ app.post('/getallchats', (req, res) => {
     } catch (err) {
         res.status(200).json([]);
         res.end();
-        console.log('error: ' + err);
     }
 })

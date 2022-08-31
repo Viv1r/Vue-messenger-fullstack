@@ -1,12 +1,12 @@
 async function register(app) {
-    app.registerErrors = [];
+    app.errors = [];
     const body = {
         username: app.registerForm.username.value,
         password: app.registerForm.password.value,
         name: app.registerForm.name.value    
     };
     if (!body.username || !body.password || !body.name) {
-        app.registerErrors.push('Some fields are empty!');
+        app.errors.push('Some fields are empty!');
         return;
     }
     app.$emit('setLoading', true);
@@ -23,18 +23,18 @@ async function register(app) {
     if (data.status == 'REGISTERED') {
         app.$emit('setScreen', 'chats');
     } else if (data.status === 'ERROR') {
-        app.registerErrors = data.errors;
+        app.errors = data.errors;
     }
 }
 
 async function login(app) {
-    app.loginErrors = [];
+    app.errors = [];
     const body = {
         username: app.loginForm.username.value,
         password: app.loginForm.password.value
     };
     if (!body.username || !body.password) {
-        app.loginErrors.push('Some fields are empty!');
+        app.errors.push('Some fields are empty!');
         return;
     }
     app.$emit('setLoading', true);
@@ -51,7 +51,7 @@ async function login(app) {
     if (data.status == 'LOGGED_IN') {
         app.$emit('setScreen', 'chats');
     } else if (data.status === 'ERROR') {
-        app.loginErrors = data.errors;
+        app.errors = data.errors;
     }
 }
 
@@ -76,6 +76,7 @@ async function cookieAuth(setScreen) {
         setScreen('chats');
     } else {
         setScreen('welcome');
+        localStorage.clear();
     }
 }
 

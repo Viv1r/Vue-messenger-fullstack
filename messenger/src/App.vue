@@ -145,7 +145,7 @@ export default {
             console.log(data);
             if (data.status == 'GOT_MESSAGES' && data.messages) {
                 data.messages.forEach(elem => {
-                    let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime];
+                    let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
                     if (this.currentChat == senderID) {
                         this.readChat(senderID);
                     }
@@ -160,6 +160,7 @@ export default {
                         }
                         let thisChat = this.chats[this.chatIndex(senderID)];
                         thisChat.messages.push({
+                            id: id,
                             senderID: senderID,
                             sender: sender,
                             text: text || '',
@@ -168,8 +169,8 @@ export default {
                         thisChat.unreadCount++;
                     }
                 });
-                this.sortChats();
             }
+            this.sortChats();
             this.seekMessages();
         },
         async getAllChats() {

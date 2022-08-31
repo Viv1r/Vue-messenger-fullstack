@@ -2,19 +2,19 @@
 
 <div class="login_form"> <!-- ВХОД -->
     <h1>Log in</h1>
-    <div class="field_wrapper" v-for="(inp, index) in loginForm">
+    <div class="field_wrapper" v-for="(inp, key) in loginForm">
         <template v-if="(typeof(inp) == 'object')">
             {{ inp.title }}
             <input
                 :class="'log_inp_'+inp.type"
                 :type="inp.type"
-                :name="index"
+                :name="key"
                 v-model="inp.value"
                 @keydown.enter="login()"
             >
         </template>
     </div>
-    <div v-for="err in loginErrors" class="auth_error">{{ err }}</div>
+    <div v-for="err in errors" class="auth_error">{{ err }}</div>
     <div class="login_button_wrapper">
         <button id="login" @click="login()">Log in</button>
     </div>
@@ -25,18 +25,24 @@
 
 <script>
 import auth from '../modules/auth.js';
-import authForms from '../modules/auth_forms.js'
 
 export default {
     data() {
         return {
-            loginForm: {},
-            loginErrors: []
+            loginForm: {
+                username: {
+                    title: "Username",
+                    type: "text",
+                    value: ""
+                },
+                password: {
+                    title: "Password",
+                    type: "password",
+                    value: ""
+                }
+            },
+            errors: []
         }
-    },
-    beforeMount() {
-        this.loginForm = authForms.loadLogin();
-        this.loginErrors = [];
     },
     emits: ['setLoading', 'setScreen'],
     methods: {
