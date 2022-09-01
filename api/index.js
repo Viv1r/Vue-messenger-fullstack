@@ -178,7 +178,7 @@ app.post('/seekMessages', (req, res) => {
                 clearInterval(interval);
                 res.status(200).json({status: 'NO_NEW_MESSAGES'});
                 res.end();
-            }, 20000);
+            }, 30000);
             let hash = req.cookies.userhash;
         }
     )
@@ -213,6 +213,7 @@ app.post('/readchat', (req, res) => {
 // Регистрация юзера
 
 app.post('/register', (req, res) => {
+    console.log('register:', req.body);
     let [username, password, name] = [req.body.username, req.body.password, req.body.name];
     if (username && password && name) {
         auth.register(

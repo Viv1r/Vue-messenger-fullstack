@@ -1,10 +1,9 @@
 async function register(app) {
     app.errors = [];
-    const body = {
-        username: app.registerForm.username.value,
-        password: app.registerForm.password.value,
-        name: app.registerForm.name.value    
-    };
+    const body = {};
+    for (let key in app.registerForm) {
+        body[key] = app.registerForm[key].value || null;
+    }
     if (!body.username || !body.password || !body.name) {
         app.errors.push('Some fields are empty!');
         return;

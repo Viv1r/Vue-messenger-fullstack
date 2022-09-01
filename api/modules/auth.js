@@ -11,25 +11,25 @@ const sql = mysql.createConnection({
     database: 'messenger'
 });
 
-const reqs = {
-    username: {
-        title: 'username',
-        min_length: 4,
-        max_length: 24
-    },
-    password: {
-        title: 'password',
-        min_length: 8,
-        max_length: 32
-    },
-    displayName: {
-        title: 'name',
-        min_length: 3,
-        max_length: 16
-    }
-}
-
 function register(username, password, displayName, success, error) {
+    const reqs = {
+        username: {
+            title: 'username',
+            min_length: 4,
+            max_length: 24,
+            allowed_symbols: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQURSTUVWXYZ1234567890_-'
+        },
+        password: {
+            title: 'password',
+            min_length: 8,
+            max_length: 32
+        },
+        displayName: {
+            title: 'name',
+            min_length: 3,
+            max_length: 16
+        }
+    };
     sql.query(
         `SELECT id FROM users WHERE username = '${username}'`,
         (err, result) => {
@@ -43,10 +43,19 @@ function register(username, password, displayName, success, error) {
                 troubles.push("This username is taken!");
             
             for (let elem of [reqs.username, reqs.password, reqs.displayName]) {
-                console.log(elem);
-                if (elem.value.length < elem.min_length || elem.value.length > elem.max_length) {
-                    troubles.push(`The ${elem.title} doesn't match the requirements! (${elem.min_length} - ${elem.max_length} characters)`);
-                }
+                (() => {
+                    if (elem.allowed_symbols) {
+                        for (let char of elem.value) {
+                            if (!elem.allowed_symbols.includes(char)) {
+                                troubles.push(`The ${elem.title} contains restricted symbols!`);
+                                return;
+                            }
+                        }
+                    }
+                    if (elem.value.length < elem.min_length || elem.value.length > elem.max_length) {
+                        troubles.push(`The ${elem.title} doesn't match the requirements! (${elem.min_length} - ${elem.max_length} characters)`);
+                    }
+                })();
             }
             
             if (troubles.length) {

@@ -6,7 +6,7 @@
         <template v-if="(typeof(inp) == 'object')">
             {{ inp.title }}
             <input
-                :class="'log_inp_'+inp.type"
+                :class="'inp_'+inp.type"
                 :type="inp.type"
                 :name="key"
                 v-model="inp.value"

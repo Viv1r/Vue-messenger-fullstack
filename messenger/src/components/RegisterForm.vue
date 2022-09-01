@@ -6,19 +6,25 @@
         <template v-if="inp.type != 'image'">
             {{ inp.title }}
             <input
-                :class="'reg_inp_'+inp.type"
+                :class="'inp_'+inp.type"
                 :type="inp.type"
                 :name="key"
+                :id="'inp_' + inp.id"
                 v-model="inp.value"
                 @keydown.enter="register()"
             >
         </template>
         <template v-else-if="inp.type == 'image'">
             {{ inp.title }}
-            <input type="file" class="reg_inp_file" id="pp_input" accept="image/png, image/jpeg" hidden
+            <input
+                class="inp_image"
+                type="file"
+                :id="'inp_' + inp.id"
+                accept="image/png, image/jpeg"
+                hidden
                 @change="inp.value = $event.target.files[0]"
             >
-            <label for="pp_input">
+            <label class="image_input_label" :for="'inp_' + inp.id">
                 <img src="/src/assets/upload_picture.svg" alt="upload">
                 Upload a picture
             </label>
@@ -42,23 +48,27 @@ export default {
             registerForm: {
                 username: {
                     title: "Username",
+                    id: "username",
                     type: "text",
                     value: ""
                 },
                 password: {
                     title: "Password",
+                    id: "password",
                     type: "password",
                     value: ""
                 },
                 name: {
                     title: "Profile name",
+                    id: "profile_name",
                     type: "text",
                     value: ""
                 },
                 profilePicture: {
                     title: "Profile picture",
+                    id: "profile_picture",
                     type: "image",
-                    value: {a: 'a'}
+                    value: null
                 }
             },
             errors: [],

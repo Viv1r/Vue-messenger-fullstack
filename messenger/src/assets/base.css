@@ -588,12 +588,12 @@ body {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .message_info .datetime {
-  -webkit-transform: translateY(2px);
-          transform: translateY(2px);
+  -webkit-transform: translateY(3px);
+          transform: translateY(3px);
   color: #b8b8b8;
 }
 
@@ -773,8 +773,8 @@ button#login:hover {
   background-color: #757575;
 }
 
-.register_form label[for="pp_input"],
-.login_form label[for="pp_input"] {
+.register_form .image_input_label,
+.login_form .image_input_label {
   cursor: pointer;
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -801,15 +801,15 @@ button#login:hover {
   opacity: 50%;
 }
 
-.register_form label[for="pp_input"]:hover,
-.login_form label[for="pp_input"]:hover {
+.register_form .image_input_label:hover,
+.login_form .image_input_label:hover {
   background-color: var(--color-background-lighter-x2);
   -webkit-transition: all 0.2s ease-out;
   transition: all 0.2s ease-out;
 }
 
-.register_form label[for="pp_input"] img,
-.login_form label[for="pp_input"] img {
+.register_form .image_input_label img,
+.login_form .image_input_label img {
   -webkit-filter: invert(100%);
           filter: invert(100%);
   opacity: 75%;
@@ -843,10 +843,8 @@ button#login:hover {
   text-align: center;
 }
 
-.field_wrapper .reg_inp_text,
-.field_wrapper .reg_inp_password,
-.field_wrapper .log_inp_text,
-.field_wrapper .log_inp_password {
+.field_wrapper .inp_text,
+.field_wrapper .inp_password {
   border: none;
   width: 100%;
   height: 32px;
@@ -856,10 +854,8 @@ button#login:hover {
   padding: 0px 8px;
 }
 
-.field_wrapper .reg_inp_text:focus,
-.field_wrapper .reg_inp_password:focus,
-.field_wrapper .log_inp_text:focus,
-.field_wrapper .log_inp_password:focus {
+.field_wrapper .inp_text:focus,
+.field_wrapper .inp_password:focus {
   outline: none;
 }
 
