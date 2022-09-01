@@ -134,13 +134,7 @@ app.post('/getchats', (req, res) => {
                         unreadCount: raiseUnreadCount ? 1 : 0
                     });
                 });
-                for (let chat of final) {
-                    let filepath = __dirname + `/media/userpics/${chat.id}.jpg`;
-                    if (fs.existsSync(path.resolve(filepath))) {
-                        res.sendFile(filepath);
-                        console.log(`Sent ${filepath}!`);
-                    }
-                }
+                
                 res.status(200).json(final);
                 res.end();
             }
@@ -213,7 +207,6 @@ app.post('/readchat', (req, res) => {
 // Регистрация юзера
 
 app.post('/register', (req, res) => {
-    console.log('register:', req.body);
     let [username, password, name] = [req.body.username, req.body.password, req.body.name];
     if (username && password && name) {
         auth.register(
@@ -356,7 +349,7 @@ app.post('/cookieauth', (req, res) => {
     )
 });
 
-// Получение всех чатов
+// Получение всех чатов (включая чаты без сообщений)
 
 app.post('/getallchats', (req, res) => {
     let hash = req.cookies.userhash;
