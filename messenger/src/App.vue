@@ -13,7 +13,7 @@
             :miniMode="miniMode"
             :addChat="addChat"
             :chatIndex="chatIndex"
-            @goToChat="id => currentChatID = id"
+            @goToChat="goToChat"
             @logout="logout"
             @getAllChats="getAllChats"
         />
@@ -91,8 +91,8 @@ export default {
     },
     beforeMount() {
         window.addEventListener("keydown", (e) => {
-            if (this.currentChat && e.key == "Escape") {
-                this.currentChat = null;
+            if (this.currentChatID && e.key == "Escape") {
+                this.currentChatID = null;
             }
         });
         const checkWindowSize = setInterval(() => {
@@ -104,7 +104,7 @@ export default {
         goToChat(id) {
             if (id != null && !id)
                 return;
-            this.currentChat = id;
+            this.currentChatID = id;
             if (id) {
                 this.readChat(id);
             }
@@ -152,14 +152,14 @@ export default {
             const data = await response.json();
             if (data.status == 'LOGOUT') {
                 localStorage.clear();
-                app.currentChat = null;
-                app.chats = {};
+                this.currentChatID = null;
+                this.chats = {};
                 return;
             }
             if (data.status == 'GOT_MESSAGES' && data.messages) {
                 data.messages.forEach(elem => {
                     let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
-                    if (this.currentChat == senderID) {
+                    if (this.currentChatID == senderID) {
                         this.readChat(senderID);
                     }
                     if (senderID && sender) {

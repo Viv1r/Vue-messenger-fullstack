@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon index.js",
+    "prod": "node index.js",
     "setup": "node setup.js"
   },
   "author": "viv1r",
