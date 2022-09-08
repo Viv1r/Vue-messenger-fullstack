@@ -37,6 +37,10 @@
   transition: all 0.2s ease-out;
 }
 
+div {
+  overflow: hidden;
+}
+
 body {
   min-height: 100vh;
   height: 100vh;
@@ -387,6 +391,8 @@ body {
   margin: 0;
   width: 64px;
   height: 64px;
+  min-width: 64px;
+  max-width: 64px;
   border-radius: 50%;
   -ms-flex-item-align: center;
       -ms-grid-row-align: center;
@@ -395,11 +401,20 @@ body {
 
 .chat_info .content {
   padding-left: 12px;
+  padding-right: 8px;
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
   -webkit-transform: translateY(-2px);
           transform: translateY(-2px);
+}
+
+.chat_info .content p {
+  width: auto;
+  height: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat_info h1 {
@@ -416,6 +431,7 @@ body {
 
 .chat_info .unread_counter {
   width: 32px;
+  min-width: 32px;
   height: 32px;
   display: -webkit-box;
   display: -ms-flexbox;
@@ -434,7 +450,7 @@ body {
   margin-right: 16px;
   background-color: var(--color-theme-2);
   color: white;
-  font-size: 1.25em;
+  font-size: 1.2em;
   font-weight: bold;
 }
 
@@ -691,6 +707,10 @@ button#login:hover {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
   -webkit-box-pack: center;
       -ms-flex-pack: center;
           justify-content: center;
@@ -705,8 +725,8 @@ button#login:hover {
   left: auto;
   top: auto;
   bottom: auto;
-  -webkit-transform: translateX(400%) translateY(-280px);
-          transform: translateX(400%) translateY(-280px);
+  -webkit-transform: translateY(-320px);
+          transform: translateY(-320px);
 }
 
 .register_form,
@@ -726,6 +746,7 @@ button#login:hover {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+  position: absolute;
   gap: 16px;
   margin: auto;
   padding-top: 32px;

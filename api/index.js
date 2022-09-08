@@ -7,6 +7,7 @@ import fs from 'fs';
 
 import auth from './modules/auth.js';
 import hashgen from './modules/hashgen.js';
+import format from './modules/format.js';
 
 const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
@@ -181,8 +182,8 @@ app.post('/seekMessages', (req, res) => {
 // Юзер открывает чат (пометить сообщения как прочитанные)
 
 app.post('/readchat', (req, res) => {
-    let chatID = req.body.chatID,
-        hash = req.cookies.userhash;
+    let chatID = Number(req.body.chatID),
+        hash = format.secure(req.cookies.userhash);
     sql.query(
         `UPDATE messages SET readmark = 1
         WHERE sender_id = ${chatID}
@@ -207,7 +208,7 @@ app.post('/readchat', (req, res) => {
 // Регистрация юзера
 
 app.post('/register', (req, res) => {
-    let [username, password, name] = [req.body.username, req.body.password, req.body.name];
+    let [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
     if (username && password && name) {
         auth.register(
             username,
@@ -235,7 +236,7 @@ app.post('/register', (req, res) => {
 // Вход в аккаунт
 
 app.post('/login', (req, res) => {
-    let [username, password] = [req.body.username, req.body.password];
+    let [username, password] = format.secureMultiple(req.body.username, req.body.password);
     if (!username || !password) {
         res.status(200).json({ status: 'ERROR', errors: ['Some fields are empty!'] });
         res.end();
@@ -276,8 +277,11 @@ app.post('/logout', (req, res) => {
 // Отправка сообщений
 
 app.post('/sendmessage', (req, res) => {
-    let hash = req.cookies.userhash;
-    let [message, recipient] = [req.body.message, Number(req.body.recipient)];
+    let hash = format.secure(req.cookies.userhash);
+    let [message, recipient] = [
+        format.secure(req.body.message),
+        Number(req.body.recipient)
+    ];
     if (!hash || !message || !recipient) {
         res.status(200).json({status: 'NOT_SENT', errors: ['Some data is missing!']});
         res.end();
@@ -287,7 +291,7 @@ app.post('/sendmessage', (req, res) => {
         `SELECT id AS senderID, IF((SELECT id FROM users WHERE id = ${recipient} LIMIT 1) > 0, 1, 0) AS recipientExists
         FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
-            if (!result.length) {
+            if (err || !result.length) {
                 res.status(200).json({status: 'NOT_SENT', errors: ['User is not identified!']});
                 res.end();
                 return;

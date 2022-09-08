@@ -29,7 +29,6 @@
     --section-gap: 160px;
 }
 
-
 *,
 *::before,
 *::after {
@@ -38,6 +37,10 @@
     position: relative;
     font-weight: normal;
     transition: all 0.2s ease-out;
+}
+
+div {
+    overflow: hidden;
 }
 
 body {
@@ -289,13 +292,23 @@ body {
         margin: 0;
         width: 64px;
         height: 64px;
+        min-width: 64px;
+        max-width: 64px;
         border-radius: 50%;
         align-self: center;
     }
     .content {
         padding-left: 12px;
+        padding-right: 8px;
         height: fit-content;
         transform: translateY(-2px);
+        p {
+            width: auto;
+            height: auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
     h1 {
         color: #f8f8f8;
@@ -309,6 +322,7 @@ body {
     }
     .unread_counter {
         width: 32px;
+        min-width: 32px;
         height: 32px;
         display: flex;
         justify-content: center;
@@ -320,7 +334,7 @@ body {
         margin-right: 16px;
         background-color: var(--color-theme-2);
         color: white;
-        font-size: 1.25em;
+        font-size: 1.2em;
         font-weight: bold;
     }
 }
@@ -498,6 +512,7 @@ button#login {
     padding: none;
     position: absolute;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     .changetheme_button {
@@ -506,7 +521,7 @@ button#login {
         left: auto;
         top: auto;
         bottom: auto;
-        transform: translateX(400%) translateY(-280px);
+        transform: translateY(-320px);
     }
 }
 
@@ -519,6 +534,7 @@ button#login {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: absolute;
     gap: 16px;
     margin: auto;
     padding-top: 32px;

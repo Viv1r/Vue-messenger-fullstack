@@ -23,7 +23,7 @@
                     <div class="profile_picture"></div>
                     <div class="content">
                         <h1>{{ chat.name }}</h1>
-                        <p>{{ getLastMessage(chat, miniMode ? 60 : 30) }}</p>
+                        <p>{{ getLastMessage(chat) }}</p>
                     </div>
                     <div v-if="chat.unreadCount" class="unread_counter">
                         {{ chat.unreadCount }}
@@ -50,8 +50,6 @@
 </template>
 
 <script>
-import format from '../modules/format.js';
-
 export default {
     data() {
         return {
@@ -81,15 +79,13 @@ export default {
             }
             this.$emit('goToChat', chat.id);
         },
-        getLastMessage(chat, length) {
-            if (!chat.messages.length)
+        getLastMessage(chat) {
+            if (!chat.messages || !chat.messages.length)
                 return 'No messages';
             try {
-                let result =
-                    chat.messages[chat.messages.length - 1].sender
+                return chat.messages[chat.messages.length - 1].sender
                     + ': '
                     + chat.messages[chat.messages.length - 1].text;
-                return format.strcut(result, length);
             }
             catch {
                 return '...';

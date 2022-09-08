@@ -41,15 +41,12 @@ sql.query(
       PRIMARY KEY (id),
       UNIQUE INDEX id_UNIQUE (id ASC) VISIBLE
     )`,
-    (err, res) => {
-        [error, result] = [err, res];
+    (error, result) => {
+        if (result) {
+            console.log('Setup complete!');
+        } else {
+            console.log(error);
+        }
+        exit();
     }
 );
-
-if (result) {
-    console.log('Setup complete!');
-} else {
-    console.log(error);
-}
-
-exit();

@@ -1,59 +1,70 @@
 <template>
 
-<div class="loading_overlay" v-if="loading">
-    <img class="loading_indicator" src="/src/assets/loading.gif" alt="loading" rel="preload">
-</div>
+<Transition name="fade">
+    <div class="loading_overlay" v-if="loading">
+        <img
+            class="loading_indicator"
+            src="/src/assets/loading.gif"
+            alt="loading"
+            rel="preload"
+        >
+    </div>
+</Transition>
 
 <div :class="'app_wrapper' + (lightTheme ? ' light' : '')">
-	<div v-if="screen == 'chats'" class="window">
-        <ChatList
-            :chats="chats"
-            :allChats="allChats"
-            :currentChatID="currentChatID"
-            :miniMode="miniMode"
-            :addChat="addChat"
-            :chatIndex="chatIndex"
-            @goToChat="goToChat"
-            @logout="logout"
-            @getAllChats="getAllChats"
-        />
-		<ChatsDisplay
-			:currentChat="chats[chatIndex(currentChatID)]"
-			:currentChatID="currentChatID"
-			:miniMode="miniMode"
-            :chatsLoaded="chatsLoaded"
-            @goToChat="goToChat"
-            @getMessage="getMessage"
-            @mounted="loadChats"
-		/>
-        <ChangeTheme
-            @changeLightTheme="lightTheme = !lightTheme"
-            :lightTheme="lightTheme"
-        />
-	</div>
-	<div v-else class="basic_screen">
-		<div v-if="screen == 'welcome'" class="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
-			<h1>Welcome!</h1>
-			<button id="register" @click="screen = 'register'">Register</button>
-			<button id="login" @click="screen = 'login'">Log in</button>
-		</div>
-		<template v-else-if="screen == 'register'">
-            <RegisterForm
-                @setLoading="param => loading = param"
-                @setScreen="param => screen = param"
+    <Transition name="fade">
+        <div v-if="screen == 'chats'" class="window" key="window">
+            <ChatList
+                :chats="chats"
+                :allChats="allChats"
+                :currentChatID="currentChatID"
+                :miniMode="miniMode"
+                :addChat="addChat"
+                :chatIndex="chatIndex"
+                @goToChat="goToChat"
+                @logout="logout"
+                @getAllChats="getAllChats"
             />
-        </template>
-		<template v-else-if="screen == 'login'">
-            <LoginForm
-                @setLoading="param => loading = param"
-                @setScreen="param => screen = param"
+            <ChatsDisplay
+                :currentChat="chats[chatIndex(currentChatID)]"
+                :currentChatID="currentChatID"
+                :miniMode="miniMode"
+                :chatsLoaded="chatsLoaded"
+                @goToChat="goToChat"
+                @getMessage="getMessage"
+                @mounted="loadChats"
             />
-        </template>
-        <ChangeTheme v-if="screen"
-            @changeLightTheme="lightTheme = !lightTheme"
-            :lightTheme="lightTheme"
-        />
-	</div>
+            <ChangeTheme
+                @changeLightTheme="lightTheme = !lightTheme"
+                :lightTheme="lightTheme"
+            />
+        </div>
+        <div v-else class="basic_screen" key="basic_screen">
+            <Transition name="fade_move">
+                <div v-if="screen == 'welcome'" class="welcome_screen" key="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
+                    <h1>Welcome!</h1>
+                    <button id="register" @click="screen = 'register'">Register</button>
+                    <button id="login" @click="screen = 'login'">Log in</button>
+                </div>
+                <template v-else-if="screen == 'register'" key="register_screen">
+                    <RegisterForm
+                        @setLoading="param => loading = param"
+                        @setScreen="param => screen = param"
+                    />
+                </template>
+                <template v-else-if="screen == 'login'" key="login_screen">
+                    <LoginForm
+                        @setLoading="param => loading = param"
+                        @setScreen="param => screen = param"
+                    />
+                </template>
+            </Transition>
+            <ChangeTheme v-if="screen"
+                    @changeLightTheme="lightTheme = !lightTheme"
+                    :lightTheme="lightTheme"
+            />
+        </div>
+    </Transition>
 </div>
 </template>
 
@@ -232,12 +243,28 @@ export default {
 }
 
 .fade-enter-active, .fade-leave-active {
-    transition: opacity .25s ease-out;
-	opacity: 100;
+    transition: all .25s ease-out;
 }
 
 .fade-enter, .fade-leave-to {
-    transition: opacity .25s ease-out;
+    transition: all .25s ease-out;
+    opacity: 0;
+}
+
+.fade_move-enter-active,
+.fade_move-leave-active,
+.fade_move-enter,
+.fade_move-leave-to {
+    transition: all .15s ease-out;
+}
+
+.fade_move-enter-active {
+    transform: translateX(-100px);
+    opacity: 0;
+}
+
+.fade_move-leave-to {
+    transform: translateX(100px);
     opacity: 0;
 }
 
