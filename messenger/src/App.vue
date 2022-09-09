@@ -35,7 +35,7 @@
                 @mounted="loadChats"
             />
             <ChangeTheme
-                @changeLightTheme="lightTheme = !lightTheme"
+                @setLightTheme="lightTheme = !lightTheme"
                 :lightTheme="lightTheme"
             />
         </div>
@@ -60,7 +60,7 @@
                 </template>
             </Transition>
             <ChangeTheme v-if="screen"
-                    @changeLightTheme="lightTheme = !lightTheme"
+                    @setLightTheme="lightTheme = !lightTheme"
                     :lightTheme="lightTheme"
             />
         </div>
@@ -106,9 +106,13 @@ export default {
                 this.currentChatID = null;
             }
         });
+
         const checkWindowSize = setInterval(() => {
             this.miniMode = window.innerWidth < 1000;
-        }, 100);
+        }, 250);
+
+        this.lightTheme = Boolean(localStorage.getItem('light-theme')) || false;
+
         auth.cookieAuth(screen => this.screen = screen);
     },
     methods: {
@@ -242,11 +246,13 @@ export default {
 	min-height: 100%;
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
     transition: all .25s ease-out;
 }
 
-.fade-enter, .fade-leave-to {
+.fade-enter,
+.fade-leave-to {
     transition: all .25s ease-out;
     opacity: 0;
 }

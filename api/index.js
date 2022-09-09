@@ -365,15 +365,16 @@ app.post('/getallchats', (req, res) => {
     }
     try {
         sql.query(
-            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
-            SELECT id, display_name AS name FROM users WHERE id != @UserID`,
+            `SELECT id, display_name AS name
+            FROM users WHERE cookie_hash != "${hash}"`,
             (err, result) => {
-                let chats = result[1];
+                if (err) {
+                    res.status(200).json({status: 'ERROR'});
+                    return res.end();
+                }
+                let chats = result;
                 if (chats.length) {
                     res.status(200).json({status: 'GOT_CHATS', chats: chats});
-                    res.end();
-                } else {
-                    res.status(200).json({status: 'ERROR'});
                     res.end();
                 }
             }

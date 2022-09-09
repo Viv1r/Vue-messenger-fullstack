@@ -37,10 +37,6 @@
   transition: all 0.2s ease-out;
 }
 
-div {
-  overflow: hidden;
-}
-
 body {
   min-height: 100vh;
   height: 100vh;
@@ -127,6 +123,7 @@ body {
   color: white;
   font-size: 1.5em;
   padding-left: 16px;
+  overflow: hidden;
 }
 
 .chatlist_menu {
@@ -343,11 +340,12 @@ body {
   min-width: 250px;
   height: auto;
   max-height: 100%;
-  cursor: pointer;
   -webkit-user-select: none;
      -moz-user-select: none;
       -ms-user-select: none;
           user-select: none;
+  overflow: hidden;
+  cursor: pointer;
   -webkit-transition: all 0.1s ease-out;
   transition: all 0.1s ease-out;
 }
@@ -405,6 +403,7 @@ body {
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
+  overflow: hidden;
   -webkit-transform: translateY(-2px);
           transform: translateY(-2px);
 }
