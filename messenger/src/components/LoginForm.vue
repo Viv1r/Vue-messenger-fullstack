@@ -2,7 +2,7 @@
 
 <div class="login_form"> <!-- ВХОД -->
     <h1>Log in</h1>
-    <div class="field_wrapper" v-for="(inp, key) in loginForm">
+    <div class="field_wrapper" v-for="(inp, key) in loginForm" :key="'field' + key">
         <template v-if="(typeof(inp) == 'object')">
             {{ inp.title }}
             <input

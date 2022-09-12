@@ -52,7 +52,7 @@ body {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow: hidden;
+    overflow: none;
 }
 
 .app_wrapper {
@@ -78,6 +78,10 @@ body {
     display: grid;
     grid-template-columns: 420px auto 48px;
     column-gap: 1%;
+    &.maxed {
+        padding: 0px;
+        display: block;
+    }
 }
 
 .chatlist_header {
@@ -94,6 +98,10 @@ body {
         color: white;
         margin-left: 20px;
         font-size: 2em;
+    }
+    .changetheme_button {
+        position: absolute;
+        right: 12px;
     }
 }
 
@@ -130,6 +138,9 @@ body {
             &.minimized {
                 height: 72px;
             }
+        }
+        .changetheme_circle_above {
+            background-color: var(--color-background3);
         }
     }
 }
@@ -186,6 +197,9 @@ body {
     &.maxed {
         grid-column-start: 1;
         grid-column-end: 3;
+        .changetheme_circle_above {
+            background-color: var(--color-background3);
+        }
     }
 }
 
@@ -217,6 +231,10 @@ body {
         color: white;
         margin-left: 20px;
         user-select: none;
+    }
+    .changetheme_button {
+        position: absolute;
+        right: 12px;
     }
 }
 
@@ -359,7 +377,7 @@ body {
 
 .typeline {
     display: grid;
-    grid-template-columns: auto 64px;
+    grid-template-columns: 56px auto 64px;
     column-gap: 8px;
     position: relative;
     bottom: 0;
@@ -367,23 +385,28 @@ body {
     height: 64px;
     background-color: var(--color-background3);
     flex: 1 1 64px;
-    input {
-        margin: auto 0px auto 18px;
-        padding: 10px;
-        display: block;
-        width: 98%;
-        height: 55%;
-        background-color: #727272;
-        border: none;
-        border-radius: 12px;
-        &:focus {
-            outline: none;
+    .input_wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        input {
+            padding: 10px;
+            display: block;
+            width: 100%;
+            height: 55%;
+            background-color: #727272;
+            border: none;
+            border-radius: 12px;
+            &:focus {
+                outline: none;
+            }
         }
     }
-    .sendbutton {
-        width: 64px;
-        height: 64px;
-        margin-right: 4px;
+    .send_message,
+    .attach_file {
+        width: 100%;
+        height: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -402,6 +425,14 @@ body {
             opacity: 20%;
             cursor: default;
         }
+    }
+    .send_message {
+        margin-right: 6px;
+    }
+    .attach_file img {
+        filter: invert(100%);
+        min-width: 65%;
+        min-height: 65%;
     }
 }
 
@@ -720,7 +751,7 @@ button#login {
             background-color: white;
             color: black;
         }
-        .sendbutton {
+        .send_message {
             filter: invert(1);
         }
     }

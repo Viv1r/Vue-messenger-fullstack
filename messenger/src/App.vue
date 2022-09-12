@@ -11,9 +11,12 @@
     </div>
 </Transition>
 
-<div :class="'app_wrapper' + (lightTheme ? ' light' : '')">
+<div :class="'app_wrapper' + ($store.state.lightTheme ? ' light' : '')">
     <Transition name="fade">
-        <div v-if="screen == 'chats'" class="window" key="window">
+        <div v-if="screen == 'chats'"
+            :class="'window' + (miniMode ? ' maxed' : '')"
+            key="window"
+        >
             <ChatList
                 :chats="chats"
                 :allChats="allChats"
@@ -25,7 +28,7 @@
                 @logout="logout"
                 @getAllChats="getAllChats"
             />
-            <ChatsDisplay
+            <ChatDisplay
                 :currentChat="chats[chatIndex(currentChatID)]"
                 :currentChatID="currentChatID"
                 :miniMode="miniMode"
@@ -34,10 +37,7 @@
                 @getMessage="getMessage"
                 @mounted="loadChats"
             />
-            <ChangeTheme
-                @setLightTheme="lightTheme = !lightTheme"
-                :lightTheme="lightTheme"
-            />
+            <ChangeTheme v-if="!miniMode"/>
         </div>
         <div v-else class="basic_screen" key="basic_screen">
             <Transition name="fade_move">
@@ -59,10 +59,7 @@
                     />
                 </template>
             </Transition>
-            <ChangeTheme v-if="screen"
-                    @setLightTheme="lightTheme = !lightTheme"
-                    :lightTheme="lightTheme"
-            />
+            <ChangeTheme v-if="screen"/>
         </div>
     </Transition>
 </div>
@@ -71,7 +68,7 @@
 <script>
 import RegisterForm from './components/RegisterForm.vue';
 import LoginForm from './components/LoginForm.vue';
-import ChatsDisplay from './components/ChatsDisplay.vue';
+import ChatDisplay from './components/ChatDisplay.vue';
 import ChatList from './components/ChatList.vue';
 import ChangeTheme from './components/ChangeTheme.vue';
 
@@ -81,26 +78,25 @@ import ChatList1 from './components/ChatList.vue';
 
 export default {
 	components: {
-    ChatList,
-    ChatsDisplay,
-    ChangeTheme,
-    RegisterForm,
-    LoginForm,
-    ChatList1
-},
+        ChatList,
+        ChatDisplay,
+        ChangeTheme,
+        RegisterForm,
+        LoginForm,
+        ChatList1
+    },
     data() {
         return {
             screen: null,
             loading: false,
             miniMode: false,
-            lightTheme: false,
             chats: [],
             allChats: [],
             currentChatID: null,
             chatsLoaded: false,
         };
     },
-    beforeMount() {
+    created() {
         window.addEventListener("keydown", (e) => {
             if (this.currentChatID && e.key == "Escape") {
                 this.currentChatID = null;
@@ -111,21 +107,24 @@ export default {
             this.miniMode = window.innerWidth < 1000;
         }, 250);
 
-        this.lightTheme = Boolean(localStorage.getItem('light-theme')) || false;
+        this.$store.commit(
+            'setLightTheme',
+            localStorage.getItem('light-theme') === 'true'    
+        );
 
         auth.cookieAuth(screen => this.screen = screen);
     },
     methods: {
         goToChat(id) {
-            if (id != null && !id)
-                return;
+            if (id != null && !id) return;
             this.currentChatID = id;
             if (id) {
                 this.readChat(id);
             }
         },
         async readChat(id) {
-            const response = await fetch('api/readchat', {
+            const URL = 'api/readchat';
+            const response = await fetch(URL, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -163,7 +162,8 @@ export default {
             }
         },
         async seekMessages() {
-            const response = await fetch('api/seekmessages', {method: 'POST'});
+            const URL = 'api/seekmessages';
+            const response = await fetch(URL, {method: 'POST'});
             const data = await response.json();
             if (data.status == 'LOGOUT') {
                 localStorage.clear();
@@ -204,7 +204,8 @@ export default {
             }
         },
         async getAllChats() {
-            const response = await fetch('api/getallchats', {method: 'POST'});
+            const URL = 'api/getallchats';
+            const response = await fetch(URL, {method: 'POST'});
             const data = await response.json();
             if (data.status = 'GOT_CHATS') {
                 this.allChats = JSON.parse(JSON.stringify(data.chats));

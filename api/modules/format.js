@@ -1,3 +1,10 @@
+function makeSecure(str) {
+    return str.replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll('"', '\\"')
+        .replaceAll('`', '\\`');
+}
+
 function secureMultiple() {
     let result = [];
     for (let i of arguments) {
@@ -5,11 +12,7 @@ function secureMultiple() {
             result.push('');
             continue;
         }
-        result.push(
-            i.replaceAll("'", "\\'")
-            .replaceAll('"', '\\"')
-            .replaceAll('`', '\\`')
-        );
+        result.push(makeSecure(i));
     }
     return result;
 }
@@ -18,9 +21,7 @@ function secure(str) {
     if (!str) {
         return null;
     }
-    return str.replaceAll("'", "\\'")
-        .replaceAll('"', '\\"')
-        .replaceAll('`', '\\`');
+    return makeSecure(str);
 }
 
 export default {

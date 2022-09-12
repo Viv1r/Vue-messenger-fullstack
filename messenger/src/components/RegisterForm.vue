@@ -2,7 +2,7 @@
 
 <div class="register_form"> <!-- РЕГИСТРАЦИЯ -->
     <h1>Register</h1>
-    <div class="field_wrapper" v-for="(inp, key) in registerForm">
+    <div class="field_wrapper" v-for="(inp, key) in registerForm" :key="'field' + key">
         <template v-if="inp.type != 'image'">
             {{ inp.title }}
             <input
@@ -22,7 +22,7 @@
                 :id="'inp_' + inp.id"
                 accept="image/png, image/jpeg"
                 hidden
-                @change="inp.value = $event.target.files[0]"
+                @change="readImage($event.target.files[0], (result) => {inp.value = result})"
             >
             <label class="image_input_label" :for="'inp_' + inp.id">
                 <img src="/src/assets/upload_picture.svg" alt="upload">
@@ -78,6 +78,15 @@ export default {
     methods: {
         register() {
             auth.register(this);
+        },
+        readImage(file, callback) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                callback(
+                    reader.result.split(',').splice(1).toString()
+                );
+            };
+            reader.readAsDataURL(file);
         }
     }
 }

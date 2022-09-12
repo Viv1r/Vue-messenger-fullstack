@@ -51,7 +51,7 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow: none;
 }
 
 .app_wrapper {
@@ -79,6 +79,11 @@ body {
       grid-template-columns: 420px auto 48px;
   -webkit-column-gap: 1%;
           column-gap: 1%;
+}
+
+.window.maxed {
+  padding: 0px;
+  display: block;
 }
 
 .chatlist_header {
@@ -109,6 +114,11 @@ body {
   color: white;
   margin-left: 20px;
   font-size: 2em;
+}
+
+.chatlist_header .changetheme_button {
+  position: absolute;
+  right: 12px;
 }
 
 .chatlist,
@@ -156,6 +166,10 @@ body {
 
 .chatlist_menu.maxed .chat.minimized {
   height: 72px;
+}
+
+.chatlist_menu.maxed .changetheme_circle_above {
+  background-color: var(--color-background3);
 }
 
 .chatlist_wrapper {
@@ -235,6 +249,10 @@ body {
   grid-column-end: 3;
 }
 
+.current_chat.maxed .changetheme_circle_above {
+  background-color: var(--color-background3);
+}
+
 .chat_header {
   width: 100%;
   height: 100%;
@@ -280,6 +298,11 @@ body {
      -moz-user-select: none;
       -ms-user-select: none;
           user-select: none;
+}
+
+.chat_header .changetheme_button {
+  position: absolute;
+  right: 12px;
 }
 
 .no_chat {
@@ -487,8 +510,8 @@ body {
 .typeline {
   display: -ms-grid;
   display: grid;
-  -ms-grid-columns: auto 64px;
-      grid-template-columns: auto 64px;
+  -ms-grid-columns: 56px auto 64px;
+      grid-template-columns: 56px auto 64px;
   -webkit-column-gap: 8px;
           column-gap: 8px;
   position: relative;
@@ -501,25 +524,35 @@ body {
           flex: 1 1 64px;
 }
 
-.typeline input {
-  margin: auto 0px auto 18px;
+.typeline .input_wrapper {
+  width: 100%;
+  height: 100%;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+
+.typeline .input_wrapper input {
   padding: 10px;
   display: block;
-  width: 98%;
+  width: 100%;
   height: 55%;
   background-color: #727272;
   border: none;
   border-radius: 12px;
 }
 
-.typeline input:focus {
+.typeline .input_wrapper input:focus {
   outline: none;
 }
 
-.typeline .sendbutton {
-  width: 64px;
-  height: 64px;
-  margin-right: 4px;
+.typeline .send_message,
+.typeline .attach_file {
+  width: 100%;
+  height: 100%;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -538,7 +571,8 @@ body {
           user-select: none;
 }
 
-.typeline .sendbutton img {
+.typeline .send_message img,
+.typeline .attach_file img {
   min-width: 50%;
   width: auto;
   height: 50%;
@@ -546,9 +580,21 @@ body {
   margin: none;
 }
 
-.typeline .sendbutton.inactive {
+.typeline .send_message.inactive,
+.typeline .attach_file.inactive {
   opacity: 20%;
   cursor: default;
+}
+
+.typeline .send_message {
+  margin-right: 6px;
+}
+
+.typeline .attach_file img {
+  -webkit-filter: invert(100%);
+          filter: invert(100%);
+  min-width: 65%;
+  min-height: 65%;
 }
 
 .message {
@@ -1003,10 +1049,10 @@ button#login:hover {
   color: black;
 }
 
-.app_wrapper.light .typeline .sendbutton,
-.app_wrapper.light .chat_header .sendbutton,
-.app_wrapper.light .chatlist_header .sendbutton,
-.app_wrapper.light .chatlist_footer .sendbutton {
+.app_wrapper.light .typeline .send_message,
+.app_wrapper.light .chat_header .send_message,
+.app_wrapper.light .chatlist_header .send_message,
+.app_wrapper.light .chatlist_footer .send_message {
   -webkit-filter: invert(1);
           filter: invert(1);
 }

@@ -9,12 +9,13 @@
     <div class="chat_header">
         <button v-if="miniMode" @click="$emit('goToChat', null)">←</button>
         <h1>{{ currentChat.name || 'No name' }}</h1>
+        <ChangeTheme v-if="miniMode"/>
     </div>
     <div class="messages_window">
         <template v-if="currentChat.messages.length > 0">
             <div class="messages_wrapper">
                 <div class="messages_list">
-                    <div class="message" v-for="(message, index) in currentChat.messages">
+                    <div class="message" v-for="(message, index) in currentChat.messages" :title="formatDT(message.datetime)">
                         <div class="message_info"
                             v-if="index == 0 || (message.senderID != currentChat.messages[index-1].senderID)"
                         >
@@ -22,7 +23,7 @@
                                 {{ message.sender }}
                             </h1>
                             <div class="datetime">
-                                {{ message.datetime }}
+                                {{ formatDT(message.datetime) }}
                             </div>
                         </div>
                         <p class="message_content">
@@ -40,14 +41,19 @@
         </template>
     </div>
     <div class="typeline">
-        <input
-            type="text"
-            v-model="toSend"
-            @keydown.enter="sendMessage()"
-            @input="setDraft($event.target.value)"
-            :style="toSend.length > 500 ? 'color: #801818' : ''"
-        >
-        <div :class="'sendbutton' + (toSend.length > 0 && toSend.length <= MESSAGE_MAX_LENGTH ? '' : ' inactive')" @click="sendMessage()">
+        <div :class="'attach_file'" @click="() => {}">
+            <img src="../assets/attach_file.svg" alt="attach_file" rel="preload">
+        </div>
+        <div class="input_wrapper">
+            <input
+                type="text"
+                v-model="toSend"
+                @keydown.enter="sendMessage()"
+                @input="setDraft($event.target.value)"
+                :style="toSend.length > 500 ? 'color: #801818' : ''"
+            >
+        </div>
+        <div :class="'send_message' + (toSend.length > 0 && toSend.length <= MESSAGE_MAX_LENGTH ? '' : ' inactive')" @click="sendMessage()">
             <img src="../assets/send_message.png" alt="send_message" rel="preload">
         </div>
     </div>
@@ -72,7 +78,7 @@ export default {
     },
     props: {
         currentChat: { type: Object, default: {} },
-        currentChatID: { default: null },
+        currentChatID: { type: Number, default: null },
         miniMode: { type: Boolean, default: false },
         chatsLoaded: { type: Boolean, default: false }
     },
@@ -87,7 +93,9 @@ export default {
             let messagesWrapper;
             if (messagesWrapper = document.querySelector('.messages_wrapper'))
                 messagesWrapper.scrollTop = 0;
-            const response = await fetch('api/sendmessage', {
+
+            const URL = 'api/sendmessage';
+            const response = await fetch(URL, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -110,6 +118,10 @@ export default {
                 );
             }
         },
+        formatDT(timestamp) {
+            let result = new Date(timestamp*1000).toLocaleString().replace(',', '');
+            return result.slice(0, result.length-3);
+        },
         setDraft(text) {
             localStorage.setItem('draft_' + this.currentChatID, text);
         }
@@ -117,6 +129,20 @@ export default {
     watch: {
         currentChatID: function(val) {
             this.toSend = localStorage.getItem('draft_' + val) || '';
+            // Фокус на строке ввода
+            let result;
+            let interval = setInterval(() => {
+                result = document.querySelector(
+                    '.typeline .input_wrapper input'
+                );
+                if (result) {
+                    result.focus();
+                }
+            }, 50);
+            setTimeout(() => {
+                clearInterval(interval);
+                return;
+            }, 250);
         }
     },
     mounted() {

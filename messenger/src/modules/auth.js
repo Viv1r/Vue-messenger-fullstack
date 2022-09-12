@@ -8,8 +8,11 @@ async function register(app) {
         app.errors.push('Some fields are empty!');
         return;
     }
+
     app.$emit('setLoading', true);
-    const response = await fetch('api/register', {
+
+    const URL = 'api/register';
+    const response = await fetch(URL, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -18,11 +21,14 @@ async function register(app) {
         body: JSON.stringify(body)
     });
     const data = await response.json();
+
     app.$emit('setLoading', false);
+
     if (data.status == 'REGISTERED') {
         app.$emit('setScreen', 'chats');
-    } else if (data.status === 'ERROR') {
+    } else if (data.status == 'ERROR') {
         app.errors = data.errors;
+        console.log('data', data);
     }
 }
 
@@ -36,8 +42,11 @@ async function login(app) {
         app.errors.push('Some fields are empty!');
         return;
     }
+
     app.$emit('setLoading', true);
-    const response = await fetch('api/login', {
+
+    const URL = 'api/login';
+    const response = await fetch(URL, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -46,16 +55,19 @@ async function login(app) {
         body: JSON.stringify(body)
     });
     const data = await response.json();
+
     app.$emit('setLoading', false);
+
     if (data.status == 'LOGGED_IN') {
         app.$emit('setScreen', 'chats');
-    } else if (data.status === 'ERROR') {
+    } else if (data.status == 'ERROR') {
         app.errors = data.errors;
     }
 }
 
 async function logout(app) {
-    const response = await fetch('api/logout', {
+    const URL = 'api/logout';
+    const response = await fetch(URL, {
         method: 'POST'
     });
     const data = await response.json();
@@ -67,7 +79,8 @@ async function logout(app) {
 }
 
 async function cookieAuth(setScreen) {
-    const response = await fetch('api/cookieauth', {
+    const URL = 'api/cookieauth';
+    const response = await fetch(URL, {
         method: 'POST'
     });
     const data = await response.json();
@@ -75,7 +88,10 @@ async function cookieAuth(setScreen) {
         setScreen('chats');
     } else {
         setScreen('welcome');
+        let lt = localStorage.getItem('light-theme');
         localStorage.clear();
+        if (lt)
+            localStorage.setItem('light-theme', lt);
     }
 }
 

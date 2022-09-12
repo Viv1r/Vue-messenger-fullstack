@@ -4,40 +4,33 @@ import mysql from 'mysql2';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import fs from 'fs';
+import isBase64 from 'is-base64';
+import jimp from 'jimp';
 
 import auth from './modules/auth.js';
 import hashgen from './modules/hashgen.js';
 import format from './modules/format.js';
+import msg from './modules/msg.js';
 
 const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
 const app = express();
 
-app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.json({limit: '10mb'}));
+app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 app.use(cors());
 
+app.use(function (err, req, res, next) {
+    if (err && err.type == 'entity.too.large') {
+        res.status(400).send({ status: 'ERROR', errors: [`The file exceeds the limit! (${err.limit/1024/1024}Mb)`] });
+    }
+    else {
+        next(err);
+    }
+});
 
-const messagesQueue = {}; // Сюда будут попадать новые сообщения на время, чтобы отсылать их прямо из этого массива, не отсылаясь к БД
-
-function addToQueue(message) {
-    let recipient = message.recipientID;
-    if (!recipient)
-        return;
-    delete message.recipient;
-
-    if (!messagesQueue[recipient])
-        messagesQueue[recipient] = {messages: [], timer: 0};
-    
-    messagesQueue[recipient].messages.push(message);
-
-    clearTimeout(messagesQueue[recipient].timer);
-    messagesQueue[recipient].timer = setTimeout(() => {
-        delete messagesQueue[recipient];
-    }, 15000);
-}
-
+const msgQueue = new msg.Queue(); // Очередь из отправляемых сообщений
 
 // MySQL
 
@@ -84,7 +77,7 @@ app.post('/getchats', (req, res) => {
                 users.id AS senderID,
                 users.display_name AS sender,
                 temp.message_text AS text,
-                DATE_FORMAT(temp.datetime, '%d.%m.%y %h:%i') AS datetime,
+                UNIX_TIMESTAMP(temp.datetime) AS datetime,
                 temp.readmark
             FROM (
                 SELECT id, sender_id, recipient_id, message_text, datetime, readmark
@@ -93,7 +86,7 @@ app.post('/getchats', (req, res) => {
             ) AS temp
             JOIN users ON users.id = temp.sender_id`,
             (err, result) => {
-                try { delete messagesQueue[result[1][0].userID]; } catch {}
+                try { delete msgQueue.list[result[1][0].userID]; } catch {}
 
                 let final = [];
                 let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
@@ -162,10 +155,10 @@ app.post('/seekMessages', (req, res) => {
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                if (messagesQueue[id] && messagesQueue[id].messages && messagesQueue[id].messages.length) {
+                if (msgQueue.list[id] && msgQueue.list[id].messages && msgQueue.list[id].messages.length) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages.splice(0)});
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: msgQueue.list[id].messages.splice(0)});
                     res.end();
                 }
             }, 250);
@@ -207,9 +200,38 @@ app.post('/readchat', (req, res) => {
 
 // Регистрация юзера
 
-app.post('/register', (req, res) => {
-    let [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
+app.post('/register', async (req, res) => {
+    const [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
+    // const profilePicture = req.body.profilePicture;
     if (username && password && name) {
+        
+        
+        /* КОД НИЖЕ БУДЕТ ИСПОЛЬЗОВАТЬСЯ, НО ВРЕМЕННО ЗАКОММЕНТИРОВАН, ИБО МНЕ ЛЕНЬ ЕГО ПРЯТАТЬ
+
+        if (profilePicture) {
+            if (!isBase64(profilePicture, { mime: true })) {
+                res.status(200).json({status: 'ERROR', errors: ['Invalid image!']});
+                return res.end();
+            }
+            let tempBuff = Buffer.from(profilePicture, 'base64');
+            await jimp.read(tempBuff).then(function (img) {
+                if (!img.bitmap.width || !img.bitmap.height) {
+                    res.status(200).json({status: 'ERROR', errors: ['Invalid image!']});
+                    return res.end();
+                }
+            }).catch (function (err) {
+                res.status(200).json({status: 'ERROR', errors: ['Invalid file type!']});
+                return res.end();
+            });
+        }
+
+        let ppBinary = new Buffer(profilePicture, 'base64').toString('binary');
+        fs.writeFile(`public/${username}_out.jpg`, ppBinary, "binary", function(err) {
+            if (err) console.log(err);
+        });
+        
+        */
+
         auth.register(
             username,
             password,
@@ -308,7 +330,7 @@ app.post('/sendmessage', (req, res) => {
                 SELECT messages.id,
                 users.display_name AS sender,
                 messages.message_text AS text,
-                DATE_FORMAT(messages.datetime, '%d.%m.%y %h:%i') AS datetime
+                UNIX_TIMESTAMP(messages.datetime) AS datetime
                 FROM messages JOIN users ON messages.sender_id = users.id
                 WHERE sender_id = ${senderID} AND recipient_id = ${recipient}
                 ORDER BY id DESC LIMIT 1`,
@@ -316,7 +338,7 @@ app.post('/sendmessage', (req, res) => {
                     if (result && result[0].affectedRows) {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
                         if (senderID != recipient) {
-                            addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                            msgQueue.add({senderID: senderID, recipientID: recipient, ...result[1][0]});
                         }
                     }
                     else {

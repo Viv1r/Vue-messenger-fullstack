@@ -3,6 +3,7 @@
 <div v-if="miniMode ? (currentChatID === null) : (true)" :class="'chatlist_menu' + (miniMode ? ' maxed' : '')">
     <div class="chatlist_header">
         <h1>{{ allChatsMenu ? 'All chats' : 'Your chats' }}</h1>
+        <ChangeTheme v-if="miniMode"/>
     </div>
     <div v-if="allChatsMenu" class="chatlist_allchats">
         <div class="chatlist_wrapper">
@@ -50,7 +51,12 @@
 </template>
 
 <script>
+import ChangeTheme from './ChangeTheme.vue';
+
 export default {
+	components: {
+        ChangeTheme
+    },
     data() {
         return {
             allChatsMenu: false

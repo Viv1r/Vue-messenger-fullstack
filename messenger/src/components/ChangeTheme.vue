@@ -1,8 +1,8 @@
 <template>
     
 <div class="changetheme_button" @click="changeTheme()">
-    <div class="changetheme_sunmoon" :style="lightTheme ? 'background-color: rgb(255, 208, 0); box-shadow: 0px 0px 10px #ffea00' : ''">
-        <div class="changetheme_circle_above" :style="lightTheme ? 'transform: translateX(64px); cursor: default; background-color: white' : ''"></div>
+    <div class="changetheme_sunmoon" :style="$store.state.lightTheme ? 'background-color: rgb(255, 208, 0); box-shadow: 0px 0px 10px #ffea00' : ''">
+        <div class="changetheme_circle_above" :style="$store.state.lightTheme ? 'transform: translateX(64px); cursor: default; background-color: white' : ''"></div>
     </div>
 </div>
     
@@ -10,14 +10,16 @@
 
 <script>
 export default {
-    props: {
-        lightTheme: { type: Boolean, default: false }
-    },
-    emits: [ 'setLightTheme' ],
     methods: {
         changeTheme() {
-            localStorage.setItem('light-theme', !this.lightTheme);
-            this.$emit('setLightTheme', !this.lightTheme);
+            localStorage.setItem(
+                'light-theme',
+                !this.$store.state.lightTheme
+            );
+            this.$store.commit(
+                'setLightTheme',
+                !this.$store.state.lightTheme
+            );
         }
     }
 }
