@@ -15,20 +15,21 @@
         <template v-if="currentChat.messages.length > 0">
             <div class="messages_wrapper">
                 <div class="messages_list">
-                    <div class="message" v-for="(message, index) in currentChat.messages" :title="formatDT(message.datetime)">
-                        <div class="message_info"
-                            v-if="index == 0 || (message.senderID != currentChat.messages[index-1].senderID)"
+                    <div class="message" v-for="(message, index) in currentChat.messages" :title="formatDT(message.datetime)"> 
+                        <template v-if="index == 0
+                                    || (message.senderID != currentChat.messages[index-1].senderID)
+                                    || (message.datetime - currentChat.messages[index-1].datetime > 300)"
                         >
-                            <h1>
-                                {{ message.sender }}
-                            </h1>
-                            <div class="datetime">
-                                {{ formatDT(message.datetime) }}
+                            <div class="profile_picture"/>
+                            <div class="message_content">
+                                <div class="message_info">
+                                    <h1>{{ message.sender }}</h1>
+                                    <div class="datetime">{{ formatDT(message.datetime) }}</div>
+                                </div>
+                                <div class="message_text">{{ message.text }}</div>
                             </div>
-                        </div>
-                        <p class="message_content">
-                            {{ message.text }}
-                        </p>
+                        </template>
+                        <div v-else class="message_text no_info">{{ message.text }}</div>
                     </div>
                 </div>
             </div>
