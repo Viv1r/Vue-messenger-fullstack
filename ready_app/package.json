@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon index.js",
+    "prod": "node index.js",
     "setup": "node setup.js"
   },
   "author": "viv1r",
@@ -14,6 +15,8 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express": "^4.18.1",
+    "is-base64": "^1.1.0",
+    "jimp": "^0.16.1",
     "mysql2": "^2.3.3"
   },
   "devDependencies": {

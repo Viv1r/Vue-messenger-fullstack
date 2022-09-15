@@ -15,6 +15,8 @@ const sql = mysql.createConnection(
 
 console.log('Setup has started...');
 
+let error, result;
+
 sql.query(
     `DROP SCHEMA messenger;
     CREATE SCHEMA messenger;
@@ -39,11 +41,12 @@ sql.query(
       PRIMARY KEY (id),
       UNIQUE INDEX id_UNIQUE (id ASC) VISIBLE
     )`,
-    (err, result) => {
-        console.log(result);
-        console.log(err);
+    (error, result) => {
+        if (result) {
+            console.log('Setup complete!');
+        } else {
+            console.log(error);
+        }
+        exit();
     }
-)
-
-console.log('Setup complete!');
-exit();
+);

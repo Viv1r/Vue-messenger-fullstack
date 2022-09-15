@@ -4,39 +4,32 @@ import mysql from 'mysql2';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import fs from 'fs';
+import jimp from 'jimp';
 
 import auth from './modules/auth.js';
 import hashgen from './modules/hashgen.js';
+import format from './modules/format.js';
+import msg from './modules/msg.js';
 
 const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
 const app = express();
 
-app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.json({limit: '5mb'}));
+app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 app.use(cors());
 
+app.use(function (err, req, res, next) {
+    if (err && err.type == 'entity.too.large') {
+        res.status(400).send({ status: 'ERROR', errors: [`The file exceeds the limit! (${err.limit/1024/1024}Mb)`] });
+    }
+    else {
+        next(err);
+    }
+});
 
-const messagesQueue = {}; // Сюда будут попадать новые сообщения на время, чтобы отсылать их прямо из этого массива, не отсылаясь к БД
-
-function addToQueue(message) {
-    let recipient = message.recipientID;
-    if (!recipient)
-        return;
-    delete message.recipient;
-
-    if (!messagesQueue[recipient])
-        messagesQueue[recipient] = {messages: [], timer: 0};
-    
-    messagesQueue[recipient].messages.push(message);
-
-    clearTimeout(messagesQueue[recipient].timer);
-    messagesQueue[recipient].timer = setTimeout(() => {
-        delete messagesQueue[recipient];
-    }, 10000);
-}
-
+const msgQueue = new msg.Queue(); // Очередь из отправляемых сообщений
 
 // MySQL
 
@@ -65,84 +58,108 @@ app.listen(PORT, () => {
 // Получение списка чатов
 
 app.post('/getchats', (req, res) => {
-    let hash = req.cookies.userhash;
+    let hash = format.secure(req.cookies.userhash);
     if (!hash) {
         res.clearCookie('userhash');
         res.status(200).json({ status: 'USER_NOT_FOUND' });
-        res.end();
-        return;
+        return res.end();
     }
     try {
         sql.query(
-            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
-            SELECT
-                @UserID as userID,
-                IF(temp.sender_id = @UserID, temp.recipient_id, temp.sender_id) AS chatID,
-                (SELECT display_name FROM users WHERE id = chatID) AS chatName,
-                temp.id AS messageID,
-                users.id AS senderID,
-                users.display_name AS sender,
-                temp.message_text AS text,
-                DATE_FORMAT(temp.datetime, '%d.%m.%y %h:%i') AS datetime,
-                temp.readmark
-            FROM (
-                SELECT id, sender_id, recipient_id, message_text, datetime, readmark
-                FROM messages
-                WHERE recipient_id = @UserID OR sender_id = @UserID ORDER BY id
-            ) AS temp
-            JOIN users ON users.id = temp.sender_id`,
+            `SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1`,
             (err, result) => {
-                delete messagesQueue.userID;
+                if (!result || !result[0].id) {
+                    res.clearCookie('userhash');
+                    res.status(200).json({ status: 'USER_NOT_FOUND'});
+                    return res.end();
+                }
+                let userID = result[0].id;
+                sql.query(
+                    `SELECT
+                        IF(messages.sender_id = ${userID},
+                            messages.recipient_id,
+                            messages.sender_id
+                        ) AS chatID,
+                        (SELECT display_name FROM users WHERE id = chatID) AS chatName,
+                        messages.id AS messageID,
+                        users.id AS senderID,
+                        users.display_name AS sender,
+                        messages.message_text AS text,
+                        UNIX_TIMESTAMP(messages.datetime) AS datetime,
+                        messages.readmark
+                    FROM messages
+                    JOIN users ON users.id = messages.sender_id
+                    WHERE recipient_id = ${userID} OR sender_id = ${userID}
+                    ORDER BY messageID`,
+                    (err, result) => {
+                        if (!result) {
+                            res.status(200).json([]);
+                            return res.end();
+                        }
 
-                let final = [];
-                let indexes = {}; // Словарь с индексами чатов, формат "индекс - айди", чтобы не было много лишних итераций цикла
+                        try { delete msgQueue.list[userID]; } catch {}
 
-                result[1].forEach(message => {
-                    let chatID = message.chatID,
-                        raiseUnreadCount = !message.readmark && message.senderID === message.chatID;
-                    
-                    let messageCut = {
-                        id: message.messageID,
-                        senderID: message.senderID,
-                        sender: message.sender,
-                        text: message.text,
-                        datetime: message.datetime
-                    };
+                        let final = [];
+                        let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
 
-                    if (indexes.hasOwnProperty(chatID)) {
-                        let index = indexes[chatID];
-                        if (raiseUnreadCount)
-                            final[index].unreadCount++;
-                        final[index].messages.push(messageCut);
-                        return;
+                        result.forEach(message => {
+                            let chatID = message.chatID,
+                                raiseUnreadCount = !message.readmark && message.senderID === message.chatID;
+                            
+                            let messageCut = {
+                                id: message.messageID,
+                                senderID: message.senderID,
+                                sender: message.sender,
+                                text: message.text,
+                                datetime: message.datetime
+                            };
+
+                            if (indexes[chatID]) {
+                                let index = indexes[chatID];
+                                if (raiseUnreadCount)
+                                    final[index].unreadCount++;
+                                final[index].messages.push(messageCut);
+                                return;
+                            }
+
+                            for (let index in final) {
+                                if (final[index].id != chatID)
+                                    continue;
+                                if (raiseUnreadCount)
+                                    final[index].unreadCount++;
+                                final[index].messages.push(messageCut);
+                                indexes[chatID] = index;
+                                return;
+                            }
+
+                            let ppURL = `media/userpics/pp_${chatID}.jpg`;
+                            if (!fs.existsSync('public/' + ppURL)) {
+                                ppURL = null;
+                            }
+
+                            final.push({
+                                id: chatID,
+                                name: message.chatName,
+                                messages: [messageCut],
+                                unreadCount: raiseUnreadCount ? 1 : 0,
+                                profilePicture: ppURL
+                            });
+                        });
+
+                        let myPP = `media/userpics/pp_${userID}.jpg`;
+                        if (!fs.existsSync('public/' + myPP)) {
+                            myPP = null;
+                        }
+                        
+                        res.status(200).json({chats: final, myID: userID, myProfilePicture: myPP});
+                        res.end();
                     }
-
-                    for (let index in final) {
-                        if (final[index].id != chatID)
-                            continue;
-                        if (raiseUnreadCount)
-                            final[index].unreadCount++;
-                        final[index].messages.push(messageCut);
-                        indexes[chatID] = index;
-                        return;
-                    }
-
-                    final.push({
-                        id: chatID,
-                        name: message.chatName,
-                        messages: [messageCut],
-                        unreadCount: raiseUnreadCount ? 1 : 0
-                    });
-                });
-
-                res.status(200).json(final);
-                res.end();
+                );
             }
         );
     } catch (err) {
-        res.status(200).json([]);
+        res.status(200).json({ status: 'USER_NOT_FOUND' });
         res.end();
-        console.log('error: ' + err);
     }
 });
 
@@ -162,19 +179,18 @@ app.post('/seekMessages', (req, res) => {
             let timeout;
             let interval = setInterval(() => {
                 let id = userID;
-                if (messagesQueue[id] && messagesQueue[id].messages) {
+                if (msgQueue.list[id] && msgQueue.list[id].messages && msgQueue.list[id].messages.length) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: messagesQueue[id].messages});
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: msgQueue.list[id].messages.splice(0)});
                     res.end();
-                    delete messagesQueue[id];
                 }
             }, 250);
             timeout = setTimeout(() => {
                 clearInterval(interval);
                 res.status(200).json({status: 'NO_NEW_MESSAGES'});
                 res.end();
-            }, 20000);
+            }, 30000);
             let hash = req.cookies.userhash;
         }
     )
@@ -183,8 +199,8 @@ app.post('/seekMessages', (req, res) => {
 // Юзер открывает чат (пометить сообщения как прочитанные)
 
 app.post('/readchat', (req, res) => {
-    let chatID = req.body.chatID,
-        hash = req.cookies.userhash;
+    let chatID = Number(req.body.chatID),
+        hash = format.secure(req.cookies.userhash);
     sql.query(
         `UPDATE messages SET readmark = 1
         WHERE sender_id = ${chatID}
@@ -208,18 +224,47 @@ app.post('/readchat', (req, res) => {
 
 // Регистрация юзера
 
-app.post('/register', (req, res) => {
-    let [username, password, name] = [req.body.username, req.body.password, req.body.name];
+app.post('/register', async (req, res) => {
+    const [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
+    const profilePicture = req.body.profilePicture;
     if (username && password && name) {
+
+        let ppFinal; // Сюда отправляется аватарка, если загружена и валидна
+        if (profilePicture) {
+            try {
+                let img = await jimp.read(
+                    Buffer.from(profilePicture, 'base64')
+                );
+                let [width, height] = [img.bitmap.width, img.bitmap.height];
+                if (!width || !height) {
+                    res.status(200).json({status: 'ERROR', errors: ['Invalid image!', !width, !height, error]});
+                    return res.end();
+                }
+                
+                let cropParams = width > height
+                    ? [(width-height)/2, 0, height*0.99, height*0.99]
+                    : [0, (height-width)/2, width*0.99, width*0.99];
+
+                ppFinal = img.crop(...cropParams)
+            } catch (e) {
+                console.log(e);
+                res.status(200).json({status: 'ERROR', errors: ['Invalid file! Please load an image!']});
+                return res.end();
+            }
+        }
+
         auth.register(
             username,
             password,
             name,
             // Коллбэк для успешной регистрации
-            (result, hash) => {
-                res.cookie('userhash', hash);
+            (result, data) => {
+                res.cookie('userhash', data.hash);
                 res.status(200).json(result);
                 res.end();
+                if (ppFinal) {
+                    ppFinal.write(`public/media/userpics/pp_${data.id}.jpg`);
+                }
             },
             // Коллбэк для неудачной регистрации
             (error) => {
@@ -237,7 +282,7 @@ app.post('/register', (req, res) => {
 // Вход в аккаунт
 
 app.post('/login', (req, res) => {
-    let [username, password] = [req.body.username, req.body.password];
+    let [username, password] = format.secureMultiple(req.body.username, req.body.password);
     if (!username || !password) {
         res.status(200).json({ status: 'ERROR', errors: ['Some fields are empty!'] });
         res.end();
@@ -278,8 +323,11 @@ app.post('/logout', (req, res) => {
 // Отправка сообщений
 
 app.post('/sendmessage', (req, res) => {
-    let hash = req.cookies.userhash;
-    let [message, recipient] = [req.body.message, Number(req.body.recipient)];
+    let hash = format.secure(req.cookies.userhash);
+    let [message, recipient] = [
+        format.secure(req.body.message),
+        Number(req.body.recipient)
+    ];
     if (!hash || !message || !recipient) {
         res.status(200).json({status: 'NOT_SENT', errors: ['Some data is missing!']});
         res.end();
@@ -289,7 +337,7 @@ app.post('/sendmessage', (req, res) => {
         `SELECT id AS senderID, IF((SELECT id FROM users WHERE id = ${recipient} LIMIT 1) > 0, 1, 0) AS recipientExists
         FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
-            if (!result.length) {
+            if (err || !result.length) {
                 res.status(200).json({status: 'NOT_SENT', errors: ['User is not identified!']});
                 res.end();
                 return;
@@ -306,7 +354,7 @@ app.post('/sendmessage', (req, res) => {
                 SELECT messages.id,
                 users.display_name AS sender,
                 messages.message_text AS text,
-                DATE_FORMAT(messages.datetime, '%d.%m.%y %h:%i') AS datetime
+                UNIX_TIMESTAMP(messages.datetime) AS datetime
                 FROM messages JOIN users ON messages.sender_id = users.id
                 WHERE sender_id = ${senderID} AND recipient_id = ${recipient}
                 ORDER BY id DESC LIMIT 1`,
@@ -314,7 +362,7 @@ app.post('/sendmessage', (req, res) => {
                     if (result && result[0].affectedRows) {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
                         if (senderID != recipient) {
-                            addToQueue({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                            msgQueue.add({senderID: senderID, recipientID: recipient, ...result[1][0]});
                         }
                     }
                     else {
@@ -340,7 +388,7 @@ app.post('/cookieauth', (req, res) => {
         `SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
             if (result.length) {
-                res.status(200).json({status: 'LOGGED_IN'})
+                res.status(200).json({status: 'LOGGED_IN', id: result.id});
                 res.end();
             } else {
                 res.clearCookie('userhash');
@@ -351,7 +399,7 @@ app.post('/cookieauth', (req, res) => {
     )
 });
 
-// Получение всех чатов
+// Получение всех чатов (включая чаты без сообщений)
 
 app.post('/getallchats', (req, res) => {
     let hash = req.cookies.userhash;
@@ -363,15 +411,22 @@ app.post('/getallchats', (req, res) => {
     }
     try {
         sql.query(
-            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
-            SELECT id, display_name AS name FROM users WHERE id != @UserID`,
+            `SELECT id, display_name AS name
+            FROM users WHERE cookie_hash != "${hash}"`,
             (err, result) => {
-                let chats = result[1];
-                if (chats.length) {
-                    res.status(200).json({status: 'GOT_CHATS', chats: chats});
-                    res.end();
-                } else {
+                if (err) {
                     res.status(200).json({status: 'ERROR'});
+                    return res.end();
+                }
+                const chats = result;
+                if (chats.length) {
+                    for (let i in chats) {
+                        let ppURL = `media/userpics/pp_${chats[i].id}.jpg`;
+                        if (fs.existsSync('public/' + ppURL)) {
+                            chats[i].profilePicture = ppURL;
+                        }
+                    }
+                    res.status(200).json({status: 'GOT_CHATS', chats: chats});
                     res.end();
                 }
             }
@@ -379,6 +434,5 @@ app.post('/getallchats', (req, res) => {
     } catch (err) {
         res.status(200).json([]);
         res.end();
-        console.log('error: ' + err);
     }
 })
