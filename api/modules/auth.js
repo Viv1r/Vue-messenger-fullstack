@@ -8,7 +8,8 @@ const SQLDATA = JSON.parse(
 
 const sql = mysql.createConnection({
     ...SQLDATA,
-    database: 'messenger'
+    database: 'messenger',
+    multipleStatements: true
 });
 
 function register(username, password, displayName, success, error) {
@@ -67,10 +68,11 @@ function register(username, password, displayName, success, error) {
             let userHash = hashgen.generate(32);
             sql.query(
                 `INSERT INTO users (username, password, display_name, cookie_hash)
-                VALUES ('${username}', '${password}', '${displayName}', '${userHash}')`,
+                VALUES ('${username}', '${password}', '${displayName}', '${userHash}');
+                SELECT id FROM users WHERE username = "${username}"`,
                 (err, result) => {
-                    if (result.affectedRows) {
-                        success({ status: 'REGISTERED' }, userHash);
+                    if (result[0] && result[0].affectedRows) {
+                        success({ status: 'REGISTERED' }, {id: result[1][0].id, hash: userHash});
                     } else {
                         error({ status: 'ERROR', errors: ['Cannot register right now'] });
                     }

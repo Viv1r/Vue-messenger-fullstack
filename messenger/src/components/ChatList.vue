@@ -8,7 +8,10 @@
     <div v-if="allChatsMenu" class="chatlist_allchats">
         <div class="chatlist_wrapper">
             <div v-for="chat in allChats" class="chat minimized" @click="tryGoToChat(chat)">
-                <div class="profile_picture"></div>
+                <div
+                    class="profile_picture"
+                    :style="chat.profilePicture ? `background-image: url(api/${chat.profilePicture})` : ''"
+                ></div>
                 {{ chat.name }}
             </div>
         </div>
@@ -21,7 +24,10 @@
                 @click="$emit('goToChat', chat.id)"
             >
                 <div class="chat_info">
-                    <div class="profile_picture"></div>
+                    <div
+                        class="profile_picture"
+                        :style="chat.profilePicture ? `background-image: url(api/${chat.profilePicture})` : ''"
+                    />
                     <div class="content">
                         <h1>{{ chat.name }}</h1>
                         <p>{{ getLastMessage(chat) }}</p>
@@ -81,7 +87,7 @@ export default {
         tryGoToChat(chat) {
             this.allChatsMenu = false;
             if (!this.chats[this.chatIndex(chat.id)]) {
-                this.addChat({ id: chat.id, name: chat.name, messages: [], unreadCount: 0 });
+                this.addChat({ id: chat.id, name: chat.name, messages: [], unreadCount: 0, profilePicture: chat.profilePicture });
             }
             this.$emit('goToChat', chat.id);
         },

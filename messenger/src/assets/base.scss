@@ -110,11 +110,17 @@ body {
     overflow-y: auto;
 }
 
-.chatlist_allchats .chat {
-    color: white;
-    font-size: 1.5em;
-    padding-left: 16px;
-    overflow: hidden;
+.chatlist_allchats {
+    .chat {
+        color: white;
+        font-size: 1.5em;
+        padding-left: 16px;
+        overflow: hidden;
+    }
+    .profile_picture {
+        width: 32px;
+        height: 32px;
+    }
 }
 
 .chatlist_menu {
@@ -259,8 +265,6 @@ body {
 }
 
 .profile_picture {
-    width: 32px;
-    height: 32px;
     background-color: white;
     background-image: url(noavatar.jpg);
     background-size: 100%;
@@ -436,14 +440,14 @@ body {
 
 .message {
     color: white;
-    width: auto;
+    width: 100%;
     min-width: 100%;
     height: fit-content;
     padding: 2px 20px 6px 16px;
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
-    align-items: center;
+    align-items: flex-start;
     h1 {
         font-size: 1.5em;
     }
@@ -452,7 +456,9 @@ body {
         background-color: rgba($color: white, $alpha: 0.05);
     }
     &_content {
+        width: auto;
         margin-bottom: 4px;
+        overflow-y: auto;
     }
     &_text {
         max-width: 100%;
@@ -466,9 +472,11 @@ body {
     }
     .profile_picture {
         width: 48px;
+        min-width: 48px;
         height: 48px;
         border-radius: 50%;
         margin-right: 16px;
+        margin-top: 8px;
     }
 }
 
@@ -477,8 +485,8 @@ body {
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
-    gap: 16px;
-    .datetime {
+    gap: 12px;
+    .message_time {
         transform: translateY(3px);
         color: #b8b8b8;
     }
@@ -619,7 +627,7 @@ button#login {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 8px auto 0 auto;
+        margin: 8px 0 0 0;
         border-radius: 12px;
         background-color: var(--color-background-lighter);
         font-family: 'Franklin Gothic Medium', sans-serif;
@@ -668,6 +676,19 @@ button#login {
         &:focus {
             outline: none;
         }
+    }
+}
+
+.inp_image_wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    .clear_input {
+        font-size: 1.75em;
+        position: absolute;
+        right: 12px;
+        transform: translateY(2px);
+        cursor: pointer;
     }
 }
 

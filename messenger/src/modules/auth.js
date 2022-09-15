@@ -78,7 +78,7 @@ async function logout(app) {
     }
 }
 
-async function cookieAuth(setScreen) {
+async function cookieAuth(setScreen, setID) {
     const URL = 'api/cookieauth';
     const response = await fetch(URL, {
         method: 'POST'
@@ -86,12 +86,14 @@ async function cookieAuth(setScreen) {
     const data = await response.json();
     if (data.status == 'LOGGED_IN') {
         setScreen('chats');
+        setID(data.id);
     } else {
         setScreen('welcome');
         let lt = localStorage.getItem('light-theme');
         localStorage.clear();
-        if (lt)
+        if (lt) {
             localStorage.setItem('light-theme', lt);
+        }
     }
 }
 

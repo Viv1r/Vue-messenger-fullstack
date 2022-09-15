@@ -4,7 +4,6 @@ import mysql from 'mysql2';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import fs from 'fs';
-import isBase64 from 'is-base64';
 import jimp from 'jimp';
 
 import auth from './modules/auth.js';
@@ -16,7 +15,7 @@ const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
 const app = express();
 
-app.use(express.json({limit: '10mb'}));
+app.use(express.json({limit: '5mb'}));
 app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 app.use(cors());
@@ -59,82 +58,107 @@ app.listen(PORT, () => {
 // Получение списка чатов
 
 app.post('/getchats', (req, res) => {
-    let hash = req.cookies.userhash;
+    let hash = format.secure(req.cookies.userhash);
     if (!hash) {
         res.clearCookie('userhash');
         res.status(200).json({ status: 'USER_NOT_FOUND' });
-        res.end();
-        return;
+        return res.end();
     }
     try {
         sql.query(
-            `SET @UserID = (SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1);
-            SELECT
-                @UserID as userID,
-                IF(temp.sender_id = @UserID, temp.recipient_id, temp.sender_id) AS chatID,
-                (SELECT display_name FROM users WHERE id = chatID) AS chatName,
-                temp.id AS messageID,
-                users.id AS senderID,
-                users.display_name AS sender,
-                temp.message_text AS text,
-                UNIX_TIMESTAMP(temp.datetime) AS datetime,
-                temp.readmark
-            FROM (
-                SELECT id, sender_id, recipient_id, message_text, datetime, readmark
-                FROM messages
-                WHERE recipient_id = @UserID OR sender_id = @UserID ORDER BY id
-            ) AS temp
-            JOIN users ON users.id = temp.sender_id`,
+            `SELECT id FROM users WHERE cookie_hash = "${hash}" LIMIT 1`,
             (err, result) => {
-                try { delete msgQueue.list[result[1][0].userID]; } catch {}
+                if (!result || !result[0].id) {
+                    res.clearCookie('userhash');
+                    res.status(200).json({ status: 'USER_NOT_FOUND'});
+                    return res.end();
+                }
+                let userID = result[0].id;
+                sql.query(
+                    `SELECT
+                        IF(messages.sender_id = ${userID},
+                            messages.recipient_id,
+                            messages.sender_id
+                        ) AS chatID,
+                        (SELECT display_name FROM users WHERE id = chatID) AS chatName,
+                        messages.id AS messageID,
+                        users.id AS senderID,
+                        users.display_name AS sender,
+                        messages.message_text AS text,
+                        UNIX_TIMESTAMP(messages.datetime) AS datetime,
+                        messages.readmark
+                    FROM messages
+                    JOIN users ON users.id = messages.sender_id
+                    WHERE recipient_id = ${userID} OR sender_id = ${userID}
+                    ORDER BY messageID`,
+                    (err, result) => {
+                        if (!result) {
+                            res.status(200).json([]);
+                            return res.end();
+                        }
 
-                let final = [];
-                let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
+                        try { delete msgQueue.list[userID]; } catch {}
 
-                result[1].forEach(message => {
-                    let chatID = message.chatID,
-                        raiseUnreadCount = !message.readmark && message.senderID === message.chatID;
-                    
-                    let messageCut = {
-                        id: message.messageID,
-                        senderID: message.senderID,
-                        sender: message.sender,
-                        text: message.text,
-                        datetime: message.datetime
-                    };
+                        let final = [];
+                        let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
 
-                    if (indexes[chatID]) {
-                        let index = indexes[chatID];
-                        if (raiseUnreadCount)
-                            final[index].unreadCount++;
-                        final[index].messages.push(messageCut);
-                        return;
+                        result.forEach(message => {
+                            let chatID = message.chatID,
+                                raiseUnreadCount = !message.readmark && message.senderID === message.chatID;
+                            
+                            let messageCut = {
+                                id: message.messageID,
+                                senderID: message.senderID,
+                                sender: message.sender,
+                                text: message.text,
+                                datetime: message.datetime
+                            };
+
+                            if (indexes[chatID]) {
+                                let index = indexes[chatID];
+                                if (raiseUnreadCount)
+                                    final[index].unreadCount++;
+                                final[index].messages.push(messageCut);
+                                return;
+                            }
+
+                            for (let index in final) {
+                                if (final[index].id != chatID)
+                                    continue;
+                                if (raiseUnreadCount)
+                                    final[index].unreadCount++;
+                                final[index].messages.push(messageCut);
+                                indexes[chatID] = index;
+                                return;
+                            }
+
+                            let ppURL = `media/userpics/pp_${chatID}.jpg`;
+                            if (!fs.existsSync('public/' + ppURL)) {
+                                ppURL = null;
+                            }
+
+                            final.push({
+                                id: chatID,
+                                name: message.chatName,
+                                messages: [messageCut],
+                                unreadCount: raiseUnreadCount ? 1 : 0,
+                                profilePicture: ppURL
+                            });
+                        });
+
+                        let myPP = `media/userpics/pp_${userID}.jpg`;
+                        if (!fs.existsSync('public/' + myPP)) {
+                            myPP = null;
+                        }
+                        
+                        res.status(200).json({chats: final, myID: userID, myProfilePicture: myPP});
+                        res.end();
                     }
-
-                    for (let index in final) {
-                        if (final[index].id != chatID)
-                            continue;
-                        if (raiseUnreadCount)
-                            final[index].unreadCount++;
-                        final[index].messages.push(messageCut);
-                        indexes[chatID] = index;
-                        return;
-                    }
-
-                    final.push({
-                        id: chatID,
-                        name: message.chatName,
-                        messages: [messageCut],
-                        unreadCount: raiseUnreadCount ? 1 : 0
-                    });
-                });
-                
-                res.status(200).json(final);
-                res.end();
+                );
             }
         );
     } catch (err) {
-        res.status(200).json([]);
+        res.status(200).json({ status: 'USER_NOT_FOUND' });
         res.end();
     }
 });
@@ -202,45 +226,45 @@ app.post('/readchat', (req, res) => {
 
 app.post('/register', async (req, res) => {
     const [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
-    // const profilePicture = req.body.profilePicture;
+    const profilePicture = req.body.profilePicture;
     if (username && password && name) {
-        
-        
-        /* КОД НИЖЕ БУДЕТ ИСПОЛЬЗОВАТЬСЯ, НО ВРЕМЕННО ЗАКОММЕНТИРОВАН, ИБО МНЕ ЛЕНЬ ЕГО ПРЯТАТЬ
 
+        let ppFinal; // Сюда отправляется аватарка, если загружена и валидна
         if (profilePicture) {
-            if (!isBase64(profilePicture, { mime: true })) {
-                res.status(200).json({status: 'ERROR', errors: ['Invalid image!']});
-                return res.end();
-            }
-            let tempBuff = Buffer.from(profilePicture, 'base64');
-            await jimp.read(tempBuff).then(function (img) {
-                if (!img.bitmap.width || !img.bitmap.height) {
-                    res.status(200).json({status: 'ERROR', errors: ['Invalid image!']});
+            try {
+                let img = await jimp.read(
+                    Buffer.from(profilePicture, 'base64')
+                );
+                let [width, height] = [img.bitmap.width, img.bitmap.height];
+                if (!width || !height) {
+                    res.status(200).json({status: 'ERROR', errors: ['Invalid image!', !width, !height, error]});
                     return res.end();
                 }
-            }).catch (function (err) {
-                res.status(200).json({status: 'ERROR', errors: ['Invalid file type!']});
-                return res.end();
-            });
-        }
+                
+                let cropParams = width > height
+                    ? [(width-height)/2, 0, height*0.99, height*0.99]
+                    : [0, (height-width)/2, width*0.99, width*0.99];
 
-        let ppBinary = new Buffer(profilePicture, 'base64').toString('binary');
-        fs.writeFile(`public/${username}_out.jpg`, ppBinary, "binary", function(err) {
-            if (err) console.log(err);
-        });
-        
-        */
+                ppFinal = img.crop(...cropParams)
+            } catch (e) {
+                console.log(e);
+                res.status(200).json({status: 'ERROR', errors: ['Invalid file! Please load an image!']});
+                return res.end();
+            }
+        }
 
         auth.register(
             username,
             password,
             name,
             // Коллбэк для успешной регистрации
-            (result, hash) => {
-                res.cookie('userhash', hash);
+            (result, data) => {
+                res.cookie('userhash', data.hash);
                 res.status(200).json(result);
                 res.end();
+                if (ppFinal) {
+                    ppFinal.write(`public/media/userpics/pp_${data.id}.jpg`);
+                }
             },
             // Коллбэк для неудачной регистрации
             (error) => {
@@ -364,7 +388,7 @@ app.post('/cookieauth', (req, res) => {
         `SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
             if (result.length) {
-                res.status(200).json({status: 'LOGGED_IN'})
+                res.status(200).json({status: 'LOGGED_IN', id: result.id});
                 res.end();
             } else {
                 res.clearCookie('userhash');
@@ -394,8 +418,14 @@ app.post('/getallchats', (req, res) => {
                     res.status(200).json({status: 'ERROR'});
                     return res.end();
                 }
-                let chats = result;
+                const chats = result;
                 if (chats.length) {
+                    for (let i in chats) {
+                        let ppURL = `media/userpics/pp_${chats[i].id}.jpg`;
+                        if (fs.existsSync('public/' + ppURL)) {
+                            chats[i].profilePicture = ppURL;
+                        }
+                    }
                     res.status(200).json({status: 'GOT_CHATS', chats: chats});
                     res.end();
                 }

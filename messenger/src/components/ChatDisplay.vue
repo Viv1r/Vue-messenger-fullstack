@@ -20,11 +20,23 @@
                                     || (message.senderID != currentChat.messages[index-1].senderID)
                                     || (message.datetime - currentChat.messages[index-1].datetime > 300)"
                         >
-                            <div class="profile_picture"/>
+                            <div v-if="message.senderID == myID"
+                                class="profile_picture"
+                                :style="myProfilePicture
+                                    ? `background-image: url(api/${myProfilePicture})`
+                                    : ''"
+                            ></div>
+                            <div v-else
+                                class="profile_picture"
+                                :style="currentChat.profilePicture
+                                    ? `background-image: url(api/${currentChat.profilePicture})`
+                                    : ''"
+                            >
+                            </div>
                             <div class="message_content">
                                 <div class="message_info">
                                     <h1>{{ message.sender }}</h1>
-                                    <div class="datetime">{{ formatDT(message.datetime) }}</div>
+                                    <div class="message_time">{{ formatDT(message.datetime, true) }}</div>
                                 </div>
                                 <div class="message_text">{{ message.text }}</div>
                             </div>
@@ -64,6 +76,7 @@
 
 <script>
 import ChangeTheme from './ChangeTheme.vue';
+import a_SendMessage from '../assets/send_message.mp3';
 
 export default {
 	components: {
@@ -71,6 +84,7 @@ export default {
 	},
     created() {
         this.MESSAGE_MAX_LENGTH = 500;
+        this.Audio_SendMessage = new Audio(a_SendMessage);
     },
     data() {
         return {
@@ -80,12 +94,15 @@ export default {
     props: {
         currentChat: { type: Object, default: {} },
         currentChatID: { type: Number, default: null },
+        myID: { type: Number, default: null },
+        myProfilePicture: { type: String, default: null },
         miniMode: { type: Boolean, default: false },
         chatsLoaded: { type: Boolean, default: false }
     },
     emits: ['getMessage', 'goToChat', 'logout', 'mounted'],
     methods: {
         async sendMessage() {
+            this.Audio_SendMessage.play();
             let [recipientID, message] = [this.currentChatID, this.toSend];
             if (!recipientID || message.length < 1 || message.length > this.MESSAGE_MAX_LENGTH)
                 return;
@@ -119,9 +136,11 @@ export default {
                 );
             }
         },
-        formatDT(timestamp) {
+        formatDT(timestamp, onlyTime) {
             let result = new Date(timestamp*1000).toLocaleString().replace(',', '');
-            return result.slice(0, result.length-3);
+            return onlyTime
+                ? result.slice(11, result.length-3)
+                : result.slice(0, result.length-3);
         },
         setDraft(text) {
             localStorage.setItem('draft_' + this.currentChatID, text);

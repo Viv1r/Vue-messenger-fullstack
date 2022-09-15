@@ -31,6 +31,8 @@
             <ChatDisplay
                 :currentChat="chats[chatIndex(currentChatID)]"
                 :currentChatID="currentChatID"
+                :myID="myID"
+                :myProfilePicture="myProfilePicture"
                 :miniMode="miniMode"
                 :chatsLoaded="chatsLoaded"
                 @goToChat="goToChat"
@@ -72,6 +74,8 @@ import ChatDisplay from './components/ChatDisplay.vue';
 import ChatList from './components/ChatList.vue';
 import ChangeTheme from './components/ChangeTheme.vue';
 
+import a_GotMessage from './assets/got_message.mp3';
+
 import auth from './modules/auth.js';
 import loadchats from './modules/load_chats.js';
 import ChatList1 from './components/ChatList.vue';
@@ -94,9 +98,13 @@ export default {
             allChats: [],
             currentChatID: null,
             chatsLoaded: false,
+            myID: null,
+            myProfilePicture: null
         };
     },
     created() {
+        this.Audio_GotMessage = new Audio(a_GotMessage);
+
         window.addEventListener("keydown", (e) => {
             if (this.currentChatID && e.key == "Escape") {
                 this.currentChatID = null;
@@ -112,7 +120,8 @@ export default {
             localStorage.getItem('light-theme') === 'true'    
         );
 
-        auth.cookieAuth(screen => this.screen = screen);
+        auth.cookieAuth(screen => this.screen = screen,
+            id => this.myID = id);
     },
     methods: {
         goToChat(id) {
@@ -146,7 +155,12 @@ export default {
             this.currentChatID = null;
         },
         async loadChats() {
-            await loadchats.load(data => this.chats = data);
+            await loadchats.load(data => {
+                this.chats = data.chats;
+                this.myID = data.myID;
+                this.myProfilePicture = data.myProfilePicture;
+            });
+            this.sortChats();
             this.seekMessages();
         },
         addChat(chat) {
@@ -172,6 +186,7 @@ export default {
                 return;
             }
             if (data.status == 'GOT_MESSAGES' && data.messages) {
+                this.Audio_GotMessage.play();
                 data.messages.forEach(elem => {
                     let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
                     if (this.currentChatID == senderID) {

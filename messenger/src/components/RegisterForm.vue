@@ -16,18 +16,24 @@
         </template>
         <template v-else-if="inp.type == 'image'">
             {{ inp.title }}
-            <input
-                class="inp_image"
-                type="file"
-                :id="'inp_' + inp.id"
-                accept="image/png, image/jpeg"
-                hidden
-                @change="readImage($event.target.files[0], (result) => {inp.value = result})"
-            >
-            <label class="image_input_label" :for="'inp_' + inp.id">
-                <img src="/src/assets/upload_picture.svg" alt="upload">
-                Upload a picture
-            </label>
+            <div class="inp_image_wrapper">
+                <input
+                    class="inp_image"
+                    type="file"
+                    :id="'inp_' + inp.id"
+                    accept="image/png, image/jpeg"
+                    hidden
+                    @change="readImage($event.target.files[0], (result) => {inp.value = result})"
+                >
+                <label class="image_input_label" :for="'inp_' + inp.id">
+                    <img src="/src/assets/upload_picture.svg" alt="upload">
+                    Upload a picture
+                </label>
+                <div v-if="inp.value"
+                    class="clear_input"
+                    @click="inp.value = null"
+                >×</div>
+            </div>
         </template>
     </div>
     <div v-for="err in errors" class="auth_error">{{ err }}</div>
