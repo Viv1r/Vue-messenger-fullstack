@@ -1,146 +1,139 @@
 <template>
 
-<div class="loading_overlay" v-if="loading">
-    <img class="loading_indicator" src="/src/assets/loading.gif" alt="loading" rel="preload">
-</div>
+<Transition name="fade">
+    <div class="loading_overlay" v-if="loading">
+        <img
+            class="loading_indicator"
+            src="/src/assets/loading.gif"
+            alt="loading"
+            rel="preload"
+        >
+    </div>
+</Transition>
 
-<div :class="'app_wrapper' + (lightTheme ? ' light' : '')">
-	<div v-if="screen == 'chats'" class="window">
-		<ChatsDisplay
-			:chats="chats"
-            :allChats="allChats"
-			:currentChat="currentChat"
-            :chatIndex="chatIndex"
-			:miniMode="miniMode"
-			:lightTheme="lightTheme"
-            :setChats="(data) => {
-                chats = data;
-                chatsLoaded = true;
-                this.sortChats();
-            }"
-            :addChat="(obj) => chats.unshift(obj)"
-            :chatsLoaded="chatsLoaded"
-            @sortChats="sortChats"
-            @getAllChats="getAllChats"
-            @seekMessagesStart="seekMessages"
-            @goToChat="goToChat"
-            @logout="logout"
-            @getMessage="getMessage"
-			@setLightTheme="(param) => lightTheme = param"
-		/>
-	</div>
-	<div v-else class="basic_screen">
-		<div v-if="screen == 'welcome'" class="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
-			<h1>Welcome!</h1>
-			<button id="register" @click="regScreen();">Register</button>
-			<button id="login" @click="loginScreen()">Log in</button>
-		</div>
-		<div v-else-if="screen == 'register'" class="register_form"> <!-- РЕГИСТРАЦИЯ -->
-			<h1>Register</h1>
-			<div class="field_wrapper" v-for="(inp, index) in registerForm">
-				<template v-if="inp.type != 'image'">
-                    {{ inp.title }}
-                    <input
-                        :class="'reg_inp_'+inp.type"
-                        :type="inp.type"
-                        :name="index"
-                        v-model="inp.value"
-                        @keydown.enter="register()"
-                    >
+<div :class="'app_wrapper' + ($store.state.lightTheme ? ' light' : '')">
+    <Transition name="fade">
+        <div v-if="screen == 'chats'"
+            :class="'window' + (miniMode ? ' maxed' : '')"
+            key="window"
+        >
+            <ChatList
+                :chats="chats"
+                :allChats="allChats"
+                :currentChatID="currentChatID"
+                :miniMode="miniMode"
+                :addChat="addChat"
+                :chatIndex="chatIndex"
+                @goToChat="goToChat"
+                @logout="logout"
+                @getAllChats="getAllChats"
+            />
+            <ChatDisplay
+                :currentChat="chats[chatIndex(currentChatID)]"
+                :currentChatID="currentChatID"
+                :myID="myID"
+                :myProfilePicture="myProfilePicture"
+                :miniMode="miniMode"
+                :chatsLoaded="chatsLoaded"
+                @goToChat="goToChat"
+                @getMessage="getMessage"
+                @mounted="loadChats"
+            />
+            <ChangeTheme v-if="!miniMode"/>
+        </div>
+        <div v-else class="basic_screen" key="basic_screen">
+            <Transition name="fade_move">
+                <div v-if="screen == 'welcome'" class="welcome_screen" key="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
+                    <h1>Welcome!</h1>
+                    <button id="register" @click="screen = 'register'">Register</button>
+                    <button id="login" @click="screen = 'login'">Log in</button>
+                </div>
+                <template v-else-if="screen == 'register'" key="register_screen">
+                    <RegisterForm
+                        @setLoading="param => loading = param"
+                        @setScreen="param => screen = param"
+                    />
                 </template>
-                <template v-else-if="inp.type == 'image'">
-                    {{ inp.title }}
-                    <input type="file" class="reg_inp_file" id="pp_input" accept="image/png, image/jpeg" hidden
-                        @change="inp.value = $event.target.files[0]"
-                    >
-                    <label for="pp_input">
-                        <img src="/src/assets/upload_picture.svg" alt="upload">
-                        Upload a picture
-                    </label>
+                <template v-else-if="screen == 'login'" key="login_screen">
+                    <LoginForm
+                        @setLoading="param => loading = param"
+                        @setScreen="param => screen = param"
+                    />
                 </template>
-			</div>
-            <div v-for="err in registerErrors" class="auth_error">{{ err }}</div>
-			<div class="register_button_wrapper">
-				<button id="register" @click="register()">Register</button>
-			</div>
-			<button class="button_return" @click="screen = 'welcome'">Back</button>
-		</div>
-		<div v-else-if="screen == 'login'" class="login_form"> <!-- ВХОД -->
-			<h1>Log in</h1>
-			<div class="field_wrapper" v-for="(inp, index) in loginForm">
-				<template v-if="(typeof(inp) == 'object')">
-					{{ inp.title }}
-					<input
-                        :class="'log_inp_'+inp.type"
-                        :type="inp.type"
-                        :name="index"
-                        v-model="inp.value"
-                        @keydown.enter="login()"
-                    >
-				</template>
-			</div>
-            <div v-for="err in loginErrors" class="auth_error">{{ err }}</div>
-            <div class="login_button_wrapper">
-                <button id="login" @click="login()">Log in</button>
-			</div>
-			<button class="button_return" @click="screen = 'welcome'">Back</button>
-		</div>
-        <ChangeTheme v-if="screen"
-            @changeLightTheme="lightTheme = !lightTheme"
-            :lightTheme="lightTheme"
-        />
-	</div>
+            </Transition>
+            <ChangeTheme v-if="screen"/>
+        </div>
+    </Transition>
 </div>
 </template>
 
 <script>
-
-import ChatsDisplay from './components/ChatsDisplay.vue';
+import RegisterForm from './components/RegisterForm.vue';
+import LoginForm from './components/LoginForm.vue';
+import ChatDisplay from './components/ChatDisplay.vue';
+import ChatList from './components/ChatList.vue';
 import ChangeTheme from './components/ChangeTheme.vue';
+
+import a_GotMessage from './assets/got_message.mp3';
+
 import auth from './modules/auth.js';
-import authForms from './modules/auth_forms.js'
+import loadchats from './modules/load_chats.js';
+import ChatList1 from './components/ChatList.vue';
+
 export default {
 	components: {
-		ChatsDisplay, ChangeTheme
-	},
+        ChatList,
+        ChatDisplay,
+        ChangeTheme,
+        RegisterForm,
+        LoginForm,
+        ChatList1
+    },
     data() {
         return {
-            currentChat: null,
             screen: null,
-            lightTheme: false,
             loading: false,
             miniMode: false,
-            chats: {},
+            chats: [],
             allChats: [],
+            currentChatID: null,
             chatsLoaded: false,
-            registerForm: {},
-            registerErrors: [],
-            loginForm: {},
-            loginErrors: []
+            myID: null,
+            myProfilePicture: null
         };
     },
-    mounted() {
+    created() {
+        this.Audio_GotMessage = new Audio(a_GotMessage);
+
         window.addEventListener("keydown", (e) => {
-            if (this.currentChat && e.key == "Escape") {
-                this.currentChat = null;
+            if (this.currentChatID && e.key == "Escape") {
+                this.currentChatID = null;
             }
         });
+
         const checkWindowSize = setInterval(() => {
             this.miniMode = window.innerWidth < 1000;
-        }, 100);
-        auth.cookieAuth((screen) => this.screen = screen);
+        }, 250);
+
+        this.$store.commit(
+            'setLightTheme',
+            localStorage.getItem('light-theme') === 'true'    
+        );
+
+        auth.cookieAuth(screen => this.screen = screen,
+            id => this.myID = id);
     },
     methods: {
         goToChat(id) {
-            if (id != null && !id)
-                return;
-            this.currentChat = id;
+            if (id != null && !id) return;
+            this.currentChatID = id;
             if (id) {
                 this.readChat(id);
             }
         },
         async readChat(id) {
-            const response = await fetch('api/readchat', {
+            const URL = 'api/readchat';
+            const response = await fetch(URL, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -155,30 +148,26 @@ export default {
                 this.chats[this.chatIndex(id)].unreadCount = 0;
             }
         },
-        regScreen() {
-            authForms.loadReg(this);
-            this.screen = 'register';
-        },
-        loginScreen() {
-            authForms.loadLogin(this);
-            this.screen = 'login';
-        },
-        register() {
-            auth.register(this);
-        },
-        login() {
-            auth.login(this);
-        },
         logout() {
             auth.logout(this);
             localStorage.clear();
+            this.chatsLoaded = false;
+            this.currentChatID = null;
         },
-		updateChats(arg) {
-			console.log('Update chats');
-		},
+        async loadChats() {
+            await loadchats.load(data => {
+                this.chats = data.chats;
+                this.myID = data.myID;
+                this.myProfilePicture = data.myProfilePicture;
+            });
+            this.sortChats();
+            this.seekMessages();
+        },
+        addChat(chat) {
+            this.chats.unshift(chat);
+        },
         sortChats() {
             if (this.chats.length >= 2) {
-                console.log('sorting chats');
                 this.chats == this.chats.sort((a, b) => {
                     return a.messages.length && b.messages.length
                         ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
@@ -187,19 +176,20 @@ export default {
             }
         },
         async seekMessages() {
-            const response = await fetch('api/seekmessages', {method: 'POST'});
+            const URL = 'api/seekmessages';
+            const response = await fetch(URL, {method: 'POST'});
             const data = await response.json();
             if (data.status == 'LOGOUT') {
                 localStorage.clear();
-                app.currentChat = null;
-                app.chats = {};
+                this.currentChatID = null;
+                this.chats = {};
                 return;
             }
-            console.log(data);
             if (data.status == 'GOT_MESSAGES' && data.messages) {
+                this.Audio_GotMessage.play();
                 data.messages.forEach(elem => {
-                    let [senderID, sender, text, datetime] = [elem.senderID, elem.sender, elem.text, elem.datetime];
-                    if (this.currentChat == senderID) {
+                    let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
+                    if (this.currentChatID == senderID) {
                         this.readChat(senderID);
                     }
                     if (senderID && sender) {
@@ -213,6 +203,7 @@ export default {
                         }
                         let thisChat = this.chats[this.chatIndex(senderID)];
                         thisChat.messages.push({
+                            id: id,
                             senderID: senderID,
                             sender: sender,
                             text: text || '',
@@ -221,12 +212,15 @@ export default {
                         thisChat.unreadCount++;
                     }
                 });
-                this.sortChats();
             }
-            this.seekMessages();
+            this.sortChats();
+            if (this.screen == 'chats') {
+                this.seekMessages();
+            }
         },
         async getAllChats() {
-            const response = await fetch('api/getallchats', {method: 'POST'});
+            const URL = 'api/getallchats';
+            const response = await fetch(URL, {method: 'POST'});
             const data = await response.json();
             if (data.status = 'GOT_CHATS') {
                 this.allChats = JSON.parse(JSON.stringify(data.chats));
@@ -241,7 +235,8 @@ export default {
                     text: text,
                     datetime: datetime
                 }
-            )
+            );
+            this.sortChats();
         },
         chatIndex(id) {
             for (let index in this.chats) {
@@ -267,13 +262,31 @@ export default {
 	min-height: 100%;
 }
 
-.fade-enter-active, .fade-leave-active {
-    transition: opacity .25s ease-out;
-	opacity: 100;
+.fade-enter-active,
+.fade-leave-active {
+    transition: all .25s ease-out;
 }
 
-.fade-enter, .fade-leave-to {
-    transition: opacity .25s ease-out;
+.fade-enter,
+.fade-leave-to {
+    transition: all .25s ease-out;
+    opacity: 0;
+}
+
+.fade_move-enter-active,
+.fade_move-leave-active,
+.fade_move-enter,
+.fade_move-leave-to {
+    transition: all .15s ease-out;
+}
+
+.fade_move-enter-active {
+    transform: translateX(-100px);
+    opacity: 0;
+}
+
+.fade_move-leave-to {
+    transform: translateX(100px);
     opacity: 0;
 }
 

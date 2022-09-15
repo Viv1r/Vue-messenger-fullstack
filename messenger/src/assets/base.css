@@ -38,9 +38,7 @@
 }
 
 body {
-  min-height: 100vh;
   height: 100vh;
-  max-height: 100vh;
   color: var(--color-text);
   background: transparent;
   -webkit-transition: color 0.5s, background-color 0.5s;
@@ -56,7 +54,6 @@ body {
 
 .app_wrapper {
   width: auto;
-  min-width: 100vw;
   height: auto;
   max-height: 100vh;
   min-height: 100vh;
@@ -79,6 +76,11 @@ body {
       grid-template-columns: 420px auto 48px;
   -webkit-column-gap: 1%;
           column-gap: 1%;
+}
+
+.window.maxed {
+  padding: 0px;
+  display: block;
 }
 
 .chatlist_header {
@@ -111,6 +113,11 @@ body {
   font-size: 2em;
 }
 
+.chatlist_header .changetheme_button {
+  position: absolute;
+  right: 12px;
+}
+
 .chatlist,
 .chatlist_allchats {
   width: 100%;
@@ -123,6 +130,12 @@ body {
   color: white;
   font-size: 1.5em;
   padding-left: 16px;
+  overflow: hidden;
+}
+
+.chatlist_allchats .profile_picture {
+  width: 32px;
+  height: 32px;
 }
 
 .chatlist_menu {
@@ -155,6 +168,10 @@ body {
 
 .chatlist_menu.maxed .chat.minimized {
   height: 72px;
+}
+
+.chatlist_menu.maxed .changetheme_circle_above {
+  background-color: var(--color-background3);
 }
 
 .chatlist_wrapper {
@@ -234,6 +251,10 @@ body {
   grid-column-end: 3;
 }
 
+.current_chat.maxed .changetheme_circle_above {
+  background-color: var(--color-background3);
+}
+
 .chat_header {
   width: 100%;
   height: 100%;
@@ -281,6 +302,11 @@ body {
           user-select: none;
 }
 
+.chat_header .changetheme_button {
+  position: absolute;
+  right: 12px;
+}
+
 .no_chat {
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -319,8 +345,6 @@ body {
 }
 
 .profile_picture {
-  width: 32px;
-  height: 32px;
   background-color: white;
   background-image: url(noavatar.jpg);
   background-size: 100%;
@@ -339,11 +363,12 @@ body {
   min-width: 250px;
   height: auto;
   max-height: 100%;
-  cursor: pointer;
   -webkit-user-select: none;
      -moz-user-select: none;
       -ms-user-select: none;
           user-select: none;
+  overflow: hidden;
+  cursor: pointer;
   -webkit-transition: all 0.1s ease-out;
   transition: all 0.1s ease-out;
 }
@@ -387,6 +412,8 @@ body {
   margin: 0;
   width: 64px;
   height: 64px;
+  min-width: 64px;
+  max-width: 64px;
   border-radius: 50%;
   -ms-flex-item-align: center;
       -ms-grid-row-align: center;
@@ -395,11 +422,21 @@ body {
 
 .chat_info .content {
   padding-left: 12px;
+  padding-right: 8px;
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
+  overflow: hidden;
   -webkit-transform: translateY(-2px);
           transform: translateY(-2px);
+}
+
+.chat_info .content p {
+  width: auto;
+  height: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat_info h1 {
@@ -416,6 +453,7 @@ body {
 
 .chat_info .unread_counter {
   width: 32px;
+  min-width: 32px;
   height: 32px;
   display: -webkit-box;
   display: -ms-flexbox;
@@ -434,7 +472,7 @@ body {
   margin-right: 16px;
   background-color: var(--color-theme-2);
   color: white;
-  font-size: 1.25em;
+  font-size: 1.2em;
   font-weight: bold;
 }
 
@@ -472,8 +510,8 @@ body {
 .typeline {
   display: -ms-grid;
   display: grid;
-  -ms-grid-columns: auto 64px;
-      grid-template-columns: auto 64px;
+  -ms-grid-columns: 56px auto 64px;
+      grid-template-columns: 56px auto 64px;
   -webkit-column-gap: 8px;
           column-gap: 8px;
   position: relative;
@@ -486,25 +524,35 @@ body {
           flex: 1 1 64px;
 }
 
-.typeline input {
-  margin: auto 0px auto 18px;
+.typeline .input_wrapper {
+  width: 100%;
+  height: 100%;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+
+.typeline .input_wrapper input {
   padding: 10px;
   display: block;
-  width: 98%;
+  width: 100%;
   height: 55%;
   background-color: #727272;
   border: none;
   border-radius: 12px;
 }
 
-.typeline input:focus {
+.typeline .input_wrapper input:focus {
   outline: none;
 }
 
-.typeline .sendbutton {
-  width: 64px;
-  height: 64px;
-  margin-right: 4px;
+.typeline .send_message,
+.typeline .attach_file {
+  width: 100%;
+  height: 100%;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
@@ -523,7 +571,8 @@ body {
           user-select: none;
 }
 
-.typeline .sendbutton img {
+.typeline .send_message img,
+.typeline .attach_file img {
   min-width: 50%;
   width: auto;
   height: 50%;
@@ -531,33 +580,49 @@ body {
   margin: none;
 }
 
-.typeline .sendbutton.inactive {
+.typeline .send_message.inactive,
+.typeline .attach_file.inactive {
   opacity: 20%;
   cursor: default;
 }
 
+.typeline .send_message {
+  margin-right: 8px;
+}
+
+.typeline .attach_file img {
+  margin-left: 2px;
+  -webkit-filter: invert(100%);
+          filter: invert(100%);
+  min-width: 65%;
+  min-height: 65%;
+}
+
 .message {
   color: white;
-  width: auto;
+  width: 100%;
   min-width: 100%;
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
-  padding: 0px 20px 8px 20px;
+  padding: 2px 20px 6px 16px;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
-  -webkit-box-orient: vertical;
+  -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+      -ms-flex-direction: row;
+          flex-direction: row;
+  -webkit-box-pack: start;
+      -ms-flex-pack: start;
+          justify-content: flex-start;
+  -webkit-box-align: start;
+      -ms-flex-align: start;
+          align-items: flex-start;
 }
 
 .message h1 {
-  font-size: 1.75em;
+  font-size: 1.5em;
 }
 
 .message:hover {
@@ -566,12 +631,32 @@ body {
 }
 
 .message_content {
+  width: auto;
+  margin-bottom: 4px;
+  overflow-y: auto;
+}
+
+.message_text {
   max-width: 100%;
   width: auto;
   height: -webkit-fit-content;
   height: -moz-fit-content;
   height: fit-content;
   word-wrap: break-word;
+  line-height: 24px;
+}
+
+.message_text.no_info {
+  padding-left: 64px;
+}
+
+.message .profile_picture {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin-right: 16px;
+  margin-top: 8px;
 }
 
 .message_info {
@@ -591,9 +676,9 @@ body {
   gap: 12px;
 }
 
-.message_info .datetime {
-  -webkit-transform: translateY(2px);
-          transform: translateY(2px);
+.message_info .message_time {
+  -webkit-transform: translateY(3px);
+          transform: translateY(3px);
   color: #b8b8b8;
 }
 
@@ -691,6 +776,10 @@ button#login:hover {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-direction: column;
+          flex-direction: column;
   -webkit-box-pack: center;
       -ms-flex-pack: center;
           justify-content: center;
@@ -705,8 +794,8 @@ button#login:hover {
   left: auto;
   top: auto;
   bottom: auto;
-  -webkit-transform: translateX(300px) translateY(-200px);
-          transform: translateX(300px) translateY(-200px);
+  -webkit-transform: translateY(-320px);
+          transform: translateY(-320px);
 }
 
 .register_form,
@@ -726,6 +815,7 @@ button#login:hover {
   -webkit-box-align: center;
       -ms-flex-align: center;
           align-items: center;
+  position: absolute;
   gap: 16px;
   margin: auto;
   padding-top: 32px;
@@ -773,8 +863,8 @@ button#login:hover {
   background-color: #757575;
 }
 
-.register_form label[for="pp_input"],
-.login_form label[for="pp_input"] {
+.register_form .image_input_label,
+.login_form .image_input_label {
   cursor: pointer;
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -793,7 +883,7 @@ button#login:hover {
   -webkit-box-pack: center;
       -ms-flex-pack: center;
           justify-content: center;
-  margin: 8px auto 0 auto;
+  margin: 8px 0 0 0;
   border-radius: 12px;
   background-color: var(--color-background-lighter);
   font-family: 'Franklin Gothic Medium', sans-serif;
@@ -801,15 +891,15 @@ button#login:hover {
   opacity: 50%;
 }
 
-.register_form label[for="pp_input"]:hover,
-.login_form label[for="pp_input"]:hover {
+.register_form .image_input_label:hover,
+.login_form .image_input_label:hover {
   background-color: var(--color-background-lighter-x2);
   -webkit-transition: all 0.2s ease-out;
   transition: all 0.2s ease-out;
 }
 
-.register_form label[for="pp_input"] img,
-.login_form label[for="pp_input"] img {
+.register_form .image_input_label img,
+.login_form .image_input_label img {
   -webkit-filter: invert(100%);
           filter: invert(100%);
   opacity: 75%;
@@ -843,10 +933,8 @@ button#login:hover {
   text-align: center;
 }
 
-.field_wrapper .reg_inp_text,
-.field_wrapper .reg_inp_password,
-.field_wrapper .log_inp_text,
-.field_wrapper .log_inp_password {
+.field_wrapper .inp_text,
+.field_wrapper .inp_password {
   border: none;
   width: 100%;
   height: 32px;
@@ -856,11 +944,30 @@ button#login:hover {
   padding: 0px 8px;
 }
 
-.field_wrapper .reg_inp_text:focus,
-.field_wrapper .reg_inp_password:focus,
-.field_wrapper .log_inp_text:focus,
-.field_wrapper .log_inp_password:focus {
+.field_wrapper .inp_text:focus,
+.field_wrapper .inp_password:focus {
   outline: none;
+}
+
+.inp_image_wrapper {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: center;
+      -ms-flex-pack: center;
+          justify-content: center;
+  -webkit-box-align: center;
+      -ms-flex-align: center;
+          align-items: center;
+}
+
+.inp_image_wrapper .clear_input {
+  font-size: 1.75em;
+  position: absolute;
+  right: 12px;
+  -webkit-transform: translateY(2px);
+          transform: translateY(2px);
+  cursor: pointer;
 }
 
 .error_screen {
@@ -987,10 +1094,10 @@ button#login:hover {
   color: black;
 }
 
-.app_wrapper.light .typeline .sendbutton,
-.app_wrapper.light .chat_header .sendbutton,
-.app_wrapper.light .chatlist_header .sendbutton,
-.app_wrapper.light .chatlist_footer .sendbutton {
+.app_wrapper.light .typeline .send_message,
+.app_wrapper.light .chat_header .send_message,
+.app_wrapper.light .chatlist_header .send_message,
+.app_wrapper.light .chatlist_footer .send_message {
   -webkit-filter: invert(1);
           filter: invert(1);
 }

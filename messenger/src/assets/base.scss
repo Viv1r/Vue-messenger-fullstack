@@ -29,7 +29,6 @@
     --section-gap: 160px;
 }
 
-
 *,
 *::before,
 *::after {
@@ -41,9 +40,7 @@
 }
 
 body {
-    min-height: 100vh;
     height: 100vh;
-    max-height: 100vh;
     color: var(--color-text);
     background: transparent;
     transition: color 0.5s, background-color 0.5s;
@@ -58,7 +55,6 @@ body {
 
 .app_wrapper {
     width: auto;
-    min-width: 100vw;
     height: auto;
     max-height: 100vh;
     min-height: 100vh;
@@ -79,6 +75,10 @@ body {
     display: grid;
     grid-template-columns: 420px auto 48px;
     column-gap: 1%;
+    &.maxed {
+        padding: 0px;
+        display: block;
+    }
 }
 
 .chatlist_header {
@@ -96,6 +96,10 @@ body {
         margin-left: 20px;
         font-size: 2em;
     }
+    .changetheme_button {
+        position: absolute;
+        right: 12px;
+    }
 }
 
 .chatlist,
@@ -106,10 +110,17 @@ body {
     overflow-y: auto;
 }
 
-.chatlist_allchats .chat {
-    color: white;
-    font-size: 1.5em;
-    padding-left: 16px;
+.chatlist_allchats {
+    .chat {
+        color: white;
+        font-size: 1.5em;
+        padding-left: 16px;
+        overflow: hidden;
+    }
+    .profile_picture {
+        width: 32px;
+        height: 32px;
+    }
 }
 
 .chatlist_menu {
@@ -130,6 +141,9 @@ body {
             &.minimized {
                 height: 72px;
             }
+        }
+        .changetheme_circle_above {
+            background-color: var(--color-background3);
         }
     }
 }
@@ -186,6 +200,9 @@ body {
     &.maxed {
         grid-column-start: 1;
         grid-column-end: 3;
+        .changetheme_circle_above {
+            background-color: var(--color-background3);
+        }
     }
 }
 
@@ -218,6 +235,10 @@ body {
         margin-left: 20px;
         user-select: none;
     }
+    .changetheme_button {
+        position: absolute;
+        right: 12px;
+    }
 }
 
 .no_chat {
@@ -244,8 +265,6 @@ body {
 }
 
 .profile_picture {
-    width: 32px;
-    height: 32px;
     background-color: white;
     background-image: url(noavatar.jpg);
     background-size: 100%;
@@ -260,8 +279,9 @@ body {
     min-width: 250px;
     height: auto;
     max-height: 100%;
-    cursor: pointer;
     user-select: none;
+    overflow: hidden;
+    cursor: pointer;
     transition: all 0.1s ease-out;
     &:hover {
         background-color: var(--vt-c-black-lighter);
@@ -289,13 +309,24 @@ body {
         margin: 0;
         width: 64px;
         height: 64px;
+        min-width: 64px;
+        max-width: 64px;
         border-radius: 50%;
         align-self: center;
     }
     .content {
         padding-left: 12px;
+        padding-right: 8px;
         height: fit-content;
+        overflow: hidden;
         transform: translateY(-2px);
+        p {
+            width: auto;
+            height: auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
     h1 {
         color: #f8f8f8;
@@ -309,6 +340,7 @@ body {
     }
     .unread_counter {
         width: 32px;
+        min-width: 32px;
         height: 32px;
         display: flex;
         justify-content: center;
@@ -320,7 +352,7 @@ body {
         margin-right: 16px;
         background-color: var(--color-theme-2);
         color: white;
-        font-size: 1.25em;
+        font-size: 1.2em;
         font-weight: bold;
     }
 }
@@ -346,7 +378,7 @@ body {
 
 .typeline {
     display: grid;
-    grid-template-columns: auto 64px;
+    grid-template-columns: 56px auto 64px;
     column-gap: 8px;
     position: relative;
     bottom: 0;
@@ -354,23 +386,28 @@ body {
     height: 64px;
     background-color: var(--color-background3);
     flex: 1 1 64px;
-    input {
-        margin: auto 0px auto 18px;
-        padding: 10px;
-        display: block;
-        width: 98%;
-        height: 55%;
-        background-color: #727272;
-        border: none;
-        border-radius: 12px;
-        &:focus {
-            outline: none;
+    .input_wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        input {
+            padding: 10px;
+            display: block;
+            width: 100%;
+            height: 55%;
+            background-color: #727272;
+            border: none;
+            border-radius: 12px;
+            &:focus {
+                outline: none;
+            }
         }
     }
-    .sendbutton {
-        width: 64px;
-        height: 64px;
-        margin-right: 4px;
+    .send_message,
+    .attach_file {
+        width: 100%;
+        height: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -390,29 +427,56 @@ body {
             cursor: default;
         }
     }
+    .send_message {
+        margin-right: 8px;
+    }
+    .attach_file img {
+        margin-left: 2px;
+        filter: invert(100%);
+        min-width: 65%;
+        min-height: 65%;
+    }
 }
 
 .message {
     color: white;
-    width: auto;
+    width: 100%;
     min-width: 100%;
     height: fit-content;
-    padding: 0px 20px 8px 20px;
+    padding: 2px 20px 6px 16px;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
     h1 {
-        font-size: 1.75em;
+        font-size: 1.5em;
     }
     &:hover {
         cursor: pointer;
         background-color: rgba($color: white, $alpha: 0.05);
     }
     &_content {
+        width: auto;
+        margin-bottom: 4px;
+        overflow-y: auto;
+    }
+    &_text {
         max-width: 100%;
         width: auto;
         height: fit-content;
         word-wrap: break-word;
+        line-height: 24px;
+        &.no_info {
+            padding-left: 64px;
+        }
+    }
+    .profile_picture {
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        margin-right: 16px;
+        margin-top: 8px;
     }
 }
 
@@ -422,8 +486,8 @@ body {
     justify-content: flex-start;
     align-items: center;
     gap: 12px;
-    .datetime {
-        transform: translateY(2px);
+    .message_time {
+        transform: translateY(3px);
         color: #b8b8b8;
     }
 }
@@ -498,6 +562,7 @@ button#login {
     padding: none;
     position: absolute;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     .changetheme_button {
@@ -506,7 +571,7 @@ button#login {
         left: auto;
         top: auto;
         bottom: auto;
-        transform: translateX(300px) translateY(-200px);
+        transform: translateY(-320px);
     }
 }
 
@@ -519,6 +584,7 @@ button#login {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: absolute;
     gap: 16px;
     margin: auto;
     padding-top: 32px;
@@ -551,7 +617,7 @@ button#login {
             background-color: #757575;
         }
     }
-    label[for="pp_input"] {
+    .image_input_label {
         cursor: pointer;
         user-select: none;
         width: 100%;
@@ -561,7 +627,7 @@ button#login {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 8px auto 0 auto;
+        margin: 8px 0 0 0;
         border-radius: 12px;
         background-color: var(--color-background-lighter);
         font-family: 'Franklin Gothic Medium', sans-serif;
@@ -598,10 +664,8 @@ button#login {
     font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
     margin: auto;
     text-align: center;
-    .reg_inp_text,
-    .reg_inp_password,
-    .log_inp_text,
-    .log_inp_password {
+    .inp_text,
+    .inp_password {
         border: none;
         width: 100%;
         height: 32px;
@@ -612,6 +676,19 @@ button#login {
         &:focus {
             outline: none;
         }
+    }
+}
+
+.inp_image_wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    .clear_input {
+        font-size: 1.75em;
+        position: absolute;
+        right: 12px;
+        transform: translateY(2px);
+        cursor: pointer;
     }
 }
 
@@ -707,7 +784,7 @@ button#login {
             background-color: white;
             color: black;
         }
-        .sendbutton {
+        .send_message {
             filter: invert(1);
         }
     }

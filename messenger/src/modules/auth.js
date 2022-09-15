@@ -1,89 +1,100 @@
 async function register(app) {
-    app.registerErrors = [];
-    let body = {
-        username: app.registerForm.username.value,
-        password: app.registerForm.password.value,
-        name: app.registerForm.name.value    
-    };
+    app.errors = [];
+    const body = {};
+    for (let key in app.registerForm) {
+        body[key] = app.registerForm[key].value || null;
+    }
     if (!body.username || !body.password || !body.name) {
-        app.registerErrors.push('Some fields are empty!');
+        app.errors.push('Some fields are empty!');
         return;
     }
-    app.loading = true;
-    await fetch('api/register', {
+
+    app.$emit('setLoading', true);
+
+    const URL = 'api/register';
+    const response = await fetch(URL, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
-    })
-    .then(data => data.json())
-    .then(result => {
-        app.loading = false;
-        if (result.status === 'REGISTERED') {
-            app.screen = 'chats';
-        } else if (result.status === 'ERROR') {
-            result.errors.forEach(err => app.registerErrors.push(err));
-        }
     });
+    const data = await response.json();
+
+    app.$emit('setLoading', false);
+
+    if (data.status == 'REGISTERED') {
+        app.$emit('setScreen', 'chats');
+    } else if (data.status == 'ERROR') {
+        app.errors = data.errors;
+        console.log('data', data);
+    }
 }
 
 async function login(app) {
-    app.loginErrors = [];
-    let body = {
+    app.errors = [];
+    const body = {
         username: app.loginForm.username.value,
         password: app.loginForm.password.value
     };
     if (!body.username || !body.password) {
-        app.loginErrors.push('Some fields are empty!');
+        app.errors.push('Some fields are empty!');
         return;
     }
-    app.loading = true;
-    await fetch('api/login', {
+
+    app.$emit('setLoading', true);
+
+    const URL = 'api/login';
+    const response = await fetch(URL, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
-    })
-    .then(data => data.json())
-    .then(result => {
-        app.loading = false;
-        if (result.status === 'LOGGED_IN') {
-            app.screen = 'chats';
-        } else if (result.status === 'ERROR') {
-            result.errors.forEach(err => app.loginErrors.push(err));
-        }
     });
+    const data = await response.json();
+
+    app.$emit('setLoading', false);
+
+    if (data.status == 'LOGGED_IN') {
+        app.$emit('setScreen', 'chats');
+    } else if (data.status == 'ERROR') {
+        app.errors = data.errors;
+    }
 }
 
 async function logout(app) {
-    await fetch('api/logout', {
+    const URL = 'api/logout';
+    const response = await fetch(URL, {
         method: 'POST'
-    })
-    .then(data => data.json())
-    .then(result => {
-        if (result.status = 'LOGGED_OUT')
-            app.loginScreen();
-            app.currentChat = null;
-            app.chats = {};
     });
+    const data = await response.json();
+    if (data.status == 'LOGGED_OUT') {
+        app.screen = 'login';
+        app.currentChat = null;
+        app.chats = {};
+    }
 }
 
-async function cookieAuth(setScreen) {
-    await fetch('api/cookieauth', {
+async function cookieAuth(setScreen, setID) {
+    const URL = 'api/cookieauth';
+    const response = await fetch(URL, {
         method: 'POST'
-    })
-    .then(data => data.json())
-    .then(result => {
-        if (result.status === 'LOGGED_IN'){
-            setScreen('chats');
-        } else {
-            setScreen('welcome');
-        }
     });
+    const data = await response.json();
+    if (data.status == 'LOGGED_IN') {
+        setScreen('chats');
+        setID(data.id);
+    } else {
+        setScreen('welcome');
+        let lt = localStorage.getItem('light-theme');
+        localStorage.clear();
+        if (lt) {
+            localStorage.setItem('light-theme', lt);
+        }
+    }
 }
 
 export default {

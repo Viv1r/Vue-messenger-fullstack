@@ -15,6 +15,8 @@ messenger/dist-ssr
 messenger/coverage
 messenger/*.local
 
+api/public
+
 /cypress/videos/
 /cypress/screenshots/
 
