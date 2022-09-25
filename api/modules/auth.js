@@ -6,13 +6,7 @@ const SQLDATA = JSON.parse(
     fs.readFileSync('cfg/sqlcfg.json')
 );
 
-const sql = mysql.createConnection({
-    ...SQLDATA,
-    database: 'messenger',
-    multipleStatements: true
-});
-
-function register(username, password, displayName, success, error) {
+function register(sql, username, password, displayName, success, error) {
     const reqs = {
         username: {
             title: 'username',
@@ -40,7 +34,7 @@ function register(username, password, displayName, success, error) {
             // Проверка условий для регистрации
             let troubles = [];
             
-            if (result.length)
+            if (result && result.length)
                 troubles.push("This username is taken!");
             
             for (let elem of [reqs.username, reqs.password, reqs.displayName]) {
@@ -82,7 +76,7 @@ function register(username, password, displayName, success, error) {
     );
 }
 
-function login(username, password, success, error) {
+function login(sql, username, password, success, error) {
     sql.query(
         `SELECT password, id FROM users WHERE username = '${username}'`,
         (err, result) => {

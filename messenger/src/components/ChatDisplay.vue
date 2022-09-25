@@ -102,15 +102,18 @@ export default {
     emits: ['getMessage', 'goToChat', 'logout', 'mounted'],
     methods: {
         async sendMessage() {
-            this.Audio_SendMessage.play();
             let [recipientID, message] = [this.currentChatID, this.toSend];
-            if (!recipientID || message.length < 1 || message.length > this.MESSAGE_MAX_LENGTH)
+            if ((!recipientID && recipientID != 0) || message.length < 1 || message.length > this.MESSAGE_MAX_LENGTH) {
                 return;
+            }
             this.toSend = '';
             localStorage.removeItem('draft_' + recipientID);
             let messagesWrapper;
-            if (messagesWrapper = document.querySelector('.messages_wrapper'))
+            if (messagesWrapper = document.querySelector('.messages_wrapper')) {
                 messagesWrapper.scrollTop = 0;
+            }
+            
+            this.Audio_SendMessage.play();
 
             const URL = 'api/sendmessage';
             const response = await fetch(URL, {

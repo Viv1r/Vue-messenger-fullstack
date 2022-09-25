@@ -20,14 +20,14 @@
         <div class="chatlist_wrapper">
             <div
                 v-for="chat in chats"
-                :class="'chat' + (Number(currentChatID) === Number(chat.id) ? ' selected' : '')"
+                :class="'chat' + (currentChatID !== null && Number(currentChatID) === Number(chat.id) ? ' selected' : '')"
                 @click="$emit('goToChat', chat.id)"
             >
                 <div class="chat_info">
                     <div
                         class="profile_picture"
                         :style="chat.profilePicture ? `background-image: url(api/${chat.profilePicture})` : ''"
-                    />
+                    ></div>
                     <div class="content">
                         <h1>{{ chat.name }}</h1>
                         <p>{{ getLastMessage(chat) }}</p>

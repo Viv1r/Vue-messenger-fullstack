@@ -105,8 +105,8 @@ export default {
     created() {
         this.Audio_GotMessage = new Audio(a_GotMessage);
 
-        window.addEventListener("keydown", (e) => {
-            if (this.currentChatID && e.key == "Escape") {
+        window.addEventListener('keydown', (e) => {
+            if (this.currentChatID >= 0 && e.key == 'Escape') {
                 this.currentChatID = null;
             }
         });
@@ -125,7 +125,7 @@ export default {
     },
     methods: {
         goToChat(id) {
-            if (id != null && !id) return;
+            if (id !== null && id !== 0 && !id) return;
             this.currentChatID = id;
             if (id) {
                 this.readChat(id);
@@ -186,22 +186,28 @@ export default {
                 return;
             }
             if (data.status == 'GOT_MESSAGES' && data.messages) {
-                this.Audio_GotMessage.play();
                 data.messages.forEach(elem => {
-                    let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
-                    if (this.currentChatID == senderID) {
-                        this.readChat(senderID);
+                    const [id, senderID, recipientID, sender, text, datetime, profilePicture]
+                    = [elem.id, elem.senderID, elem.recipientID, elem.sender, elem.text, elem.datetime, elem.profilePicture];
+                    let chatID = senderID;
+                    if (Number(recipientID) <= 0) {
+                        chatID = recipientID;
                     }
-                    if (senderID && sender) {
-                        if (!this.chats[this.chatIndex(senderID)]) {
+                    if (this.currentChatID == chatID) {
+                        this.readChat(chatID);
+                    }
+                    if (senderID >= 0 && senderID != this.myID && sender) {
+                        this.Audio_GotMessage.play();
+                        if (!this.chats[this.chatIndex(chatID)]) {
                             this.chats.unshift({
                                 id: senderID,
                                 name: sender,
                                 messages: [],
-                                unreadCount: 0
+                                unreadCount: 0,
+                                profilePicture: profilePicture || null
                             });
                         }
-                        let thisChat = this.chats[this.chatIndex(senderID)];
+                        let thisChat = this.chats[this.chatIndex(chatID)];
                         thisChat.messages.push({
                             id: id,
                             senderID: senderID,

@@ -15,8 +15,6 @@ const sql = mysql.createConnection(
 
 console.log('Setup has started...');
 
-let error, result;
-
 sql.query(
     `DROP SCHEMA messenger;
     CREATE SCHEMA messenger;

@@ -9,7 +9,7 @@ import jimp from 'jimp';
 import auth from './modules/auth.js';
 import hashgen from './modules/hashgen.js';
 import format from './modules/format.js';
-import msg from './modules/msg.js';
+import msg from './modules/messages.js';
 
 const __dirname = path.resolve(path.dirname(''));
 const PORT = 8000;
@@ -22,7 +22,7 @@ app.use(cors());
 
 app.use(function (err, req, res, next) {
     if (err && err.type == 'entity.too.large') {
-        res.status(400).send({ status: 'ERROR', errors: [`The file exceeds the limit! (${err.limit/1024/1024}Mb)`] });
+        res.status(400).send({ status: 'ERROR', errors: [`The file exceeds the limit! (${err.limit/1024**2}Mb)`] });
     }
     else {
         next(err);
@@ -30,6 +30,7 @@ app.use(function (err, req, res, next) {
 });
 
 const msgQueue = new msg.Queue(); // Очередь из отправляемых сообщений
+const groupChatsQueue = new msg.GCQueue(); // Очередь для групповых чатов
 
 // MySQL
 
@@ -37,15 +38,16 @@ const SQLDATA = JSON.parse(
     fs.readFileSync('cfg/sqlcfg.json')
 );
 
-const sql = mysql.createConnection(
+const sql = mysql.createPool(
     {
         ...SQLDATA,
         database: 'messenger',
-        multipleStatements: true
+        multipleStatements: true,
+        waitForConnections: true,
+        connectionLimit: 15,
+        queueLimit: 5
     }
 );
-
-sql.connect();
 
 // Функции для прогрузки чатов
 
@@ -78,7 +80,10 @@ app.post('/getchats', (req, res) => {
                     `SELECT
                         IF(messages.sender_id = ${userID},
                             messages.recipient_id,
-                            messages.sender_id
+                            IF(messages.recipient_id = 0,
+                                0,
+                                messages.sender_id
+                            )
                         ) AS chatID,
                         (SELECT display_name FROM users WHERE id = chatID) AS chatName,
                         messages.id AS messageID,
@@ -89,7 +94,10 @@ app.post('/getchats', (req, res) => {
                         messages.readmark
                     FROM messages
                     JOIN users ON users.id = messages.sender_id
-                    WHERE recipient_id = ${userID} OR sender_id = ${userID}
+                    WHERE
+                        sender_id = ${userID}
+                        OR recipient_id = ${userID}
+                        OR recipient_id = 0
                     ORDER BY messageID`,
                     (err, result) => {
                         if (!result) {
@@ -97,7 +105,7 @@ app.post('/getchats', (req, res) => {
                             return res.end();
                         }
 
-                        try { delete msgQueue.list[userID]; } catch {}
+                        msgQueue.delete(userID);
 
                         let final = [];
                         let indexes = {}; // Словарь с айди чатов по индексам, формат "index: id", чтобы не было много лишних итераций цикла
@@ -139,7 +147,9 @@ app.post('/getchats', (req, res) => {
 
                             final.push({
                                 id: chatID,
-                                name: message.chatName,
+                                name: chatID == 0
+                                    ? 'Group chat'
+                                    : message.chatName,
                                 messages: [messageCut],
                                 unreadCount: raiseUnreadCount ? 1 : 0,
                                 profilePicture: ppURL
@@ -172,8 +182,7 @@ app.post('/seekMessages', (req, res) => {
             if (!result[0]) {
                 res.clearCookie('userhash');
                 res.status(200).json({status: 'LOGOUT'});
-                res.end();
-                return;
+                return res.end();
             }
             let userID = Number(result[0].id);
             let timeout;
@@ -182,10 +191,25 @@ app.post('/seekMessages', (req, res) => {
                 if (msgQueue.list[id] && msgQueue.list[id].messages && msgQueue.list[id].messages.length) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: msgQueue.list[id].messages.splice(0)});
-                    res.end();
+                    let messages = msgQueue.list[id].messages.splice(0);
+                    for (let i in messages) {
+                        let ppURL = `media/userpics/pp_${messages[i].senderID}.jpg`;
+                        if (fs.existsSync('public/' + ppURL)) {
+                            messages[i].profilePicture = ppURL;
+                        }
+                    }
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: messages});
+                    return res.end();
+                } else {
+                    let messages = groupChatsQueue.get(id);
+                    if (messages) {
+                        clearTimeout(timeout);
+                        clearInterval(interval);
+                        res.status(200).json({status: 'GOT_MESSAGES', messages: messages});
+                        return res.end();
+                    }
                 }
-            }, 250);
+            }, 300);
             timeout = setTimeout(() => {
                 clearInterval(interval);
                 res.status(200).json({status: 'NO_NEW_MESSAGES'});
@@ -254,6 +278,7 @@ app.post('/register', async (req, res) => {
         }
 
         auth.register(
+            sql,
             username,
             password,
             name,
@@ -282,13 +307,14 @@ app.post('/register', async (req, res) => {
 // Вход в аккаунт
 
 app.post('/login', (req, res) => {
-    let [username, password] = format.secureMultiple(req.body.username, req.body.password);
+    const [username, password] = format.secureMultiple(req.body.username, req.body.password);
     if (!username || !password) {
         res.status(200).json({ status: 'ERROR', errors: ['Some fields are empty!'] });
         res.end();
         return;
     }
     auth.login(
+        sql,
         username,
         password,
         // Коллбэк для успешного входа
@@ -328,7 +354,7 @@ app.post('/sendmessage', (req, res) => {
         format.secure(req.body.message),
         Number(req.body.recipient)
     ];
-    if (!hash || !message || !recipient) {
+    if (!hash || !message || (!recipient && recipient !== 0)) {
         res.status(200).json({status: 'NOT_SENT', errors: ['Some data is missing!']});
         res.end();
         return;
@@ -342,7 +368,7 @@ app.post('/sendmessage', (req, res) => {
                 res.end();
                 return;
             }
-            if (!result[0].recipientExists) {
+            if (!result[0].recipientExists && recipient !== 0) {
                 res.status(200).json({status: 'NOT_SENT', errors: ['Recipient does not exist!']});
                 res.end();
                 return;
@@ -362,7 +388,10 @@ app.post('/sendmessage', (req, res) => {
                     if (result && result[0].affectedRows) {
                         res.status(200).json({status: 'SENT', senderID: senderID, ...result[1][0]});
                         if (senderID != recipient) {
-                            msgQueue.add({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                            if (recipient <= 0)
+                                groupChatsQueue.add({senderID: senderID, recipientID: recipient, ...result[1][0]});
+                            else
+                                msgQueue.add({senderID: senderID, recipientID: recipient, ...result[1][0]});
                         }
                     }
                     else {
