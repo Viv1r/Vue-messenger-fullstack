@@ -166,14 +166,19 @@ app.post('/getchats', (req, res) => {
 // Ожидание сообщений
 
 app.post('/seekMessages', (req, res) => {
+    const hash = format.secure(req.cookies.userhash);
+    if (!hash) {
+        res.clearCookie('userhash');
+        res.status(200).json({status: 'LOGOUT'});
+        return res.end();
+    }
     sql.query(
-        `SELECT id FROM users WHERE cookie_hash = '${req.cookies.userhash}' LIMIT 1`,
+        `SELECT id FROM users WHERE cookie_hash = '${hash}' LIMIT 1`,
         (err, result) => {
             if (!result[0]) {
                 res.clearCookie('userhash');
                 res.status(200).json({status: 'LOGOUT'});
-                res.end();
-                return;
+                return res.end();
             }
             let userID = Number(result[0].id);
             let timeout;
@@ -208,6 +213,10 @@ app.post('/seekMessages', (req, res) => {
 app.post('/readchat', (req, res) => {
     let chatID = Number(req.body.chatID),
         hash = format.secure(req.cookies.userhash);
+    if (!chatID || !hash) {
+        res.status(200).json({status: 'NOT_READ'});
+        return res.end();
+    }
     sql.query(
         `UPDATE messages SET readmark = 1
         WHERE sender_id = ${chatID}
@@ -315,16 +324,13 @@ app.post('/login', (req, res) => {
 // Логаут
 
 app.post('/logout', (req, res) => {
-    let hash = req.cookies.userhash;
+    let hash = format.secure(req.cookies.userhash);
     res.clearCookie('userhash');
     res.status(200).json({status: 'LOGGED_OUT'});
     res.end();
-    if (!hash)
-        return;
+    if (!hash) return;
     let newHash = hashgen.generate(32);
-    sql.query(
-        `UPDATE messenger.users SET cookie_hash = '${newHash}' WHERE cookie_hash = '${hash}'`
-    );
+    sql.query(`UPDATE messenger.users SET cookie_hash = '${newHash}' WHERE cookie_hash = '${hash}'`);
 });
 
 // Отправка сообщений
@@ -385,7 +391,7 @@ app.post('/sendmessage', (req, res) => {
 // Вход по куки без получения сообщений
 
 app.post('/cookieauth', (req, res) => {
-    let hash = req.cookies.userhash;
+    let hash = format.secure(req.cookies.userhash);
     if (!hash) {
         res.status(200).json({status: 'NO_TOKEN'});
         res.end();
@@ -409,7 +415,7 @@ app.post('/cookieauth', (req, res) => {
 // Получение всех чатов (включая чаты без сообщений)
 
 app.post('/getallchats', (req, res) => {
-    let hash = req.cookies.userhash;
+    let hash = format.secure(req.cookies.userhash);
     if (!hash) {
         res.clearCookie('userhash');
         res.status(200).json({ status: 'USER_NOT_FOUND' });
