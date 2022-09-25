@@ -12,7 +12,7 @@ import format from './modules/format.js';
 import msg from './modules/msg.js';
 
 const __dirname = path.resolve(path.dirname(''));
-const PORT = 8000;
+const PORT = 80;
 const app = express();
 
 app.use(express.json({limit: '5mb'}));
@@ -182,7 +182,14 @@ app.post('/seekMessages', (req, res) => {
                 if (msgQueue.list[id] && msgQueue.list[id].messages && msgQueue.list[id].messages.length) {
                     clearTimeout(timeout);
                     clearInterval(interval);
-                    res.status(200).json({status: 'GOT_MESSAGES', messages: msgQueue.list[id].messages.splice(0)});
+                    let messages = msgQueue.list[id].messages.splice(0);
+                    for (let i in messages) {
+                        let ppURL = `media/userpics/pp_${messages[i].senderID}.jpg`;
+                        if (fs.existsSync('public/' + ppURL)) {
+                            messages[i].profilePicture = ppURL;
+                        }
+                    }
+                    res.status(200).json({status: 'GOT_MESSAGES', messages: messages});
                     res.end();
                 }
             }, 250);
@@ -225,7 +232,7 @@ app.post('/readchat', (req, res) => {
 // Регистрация юзера
 
 app.post('/register', async (req, res) => {
-    const [username, password, name] = format.secureMultiple(req.body.username, req.body.password, req.body.name);
+    const [username, password, name] = format.secure(req.body.username, req.body.password, req.body.name);
     const profilePicture = req.body.profilePicture;
     if (username && password && name) {
 
@@ -282,7 +289,7 @@ app.post('/register', async (req, res) => {
 // Вход в аккаунт
 
 app.post('/login', (req, res) => {
-    let [username, password] = format.secureMultiple(req.body.username, req.body.password);
+    let [username, password] = format.secure(req.body.username, req.body.password);
     if (!username || !password) {
         res.status(200).json({ status: 'ERROR', errors: ['Some fields are empty!'] });
         res.end();

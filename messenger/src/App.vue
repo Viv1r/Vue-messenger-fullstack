@@ -29,7 +29,7 @@
                 @getAllChats="getAllChats"
             />
             <ChatDisplay
-                :currentChat="chats[chatIndex(currentChatID)]"
+                :currentChat="currentChat"
                 :currentChatID="currentChatID"
                 :myID="myID"
                 :myProfilePicture="myProfilePicture"
@@ -101,6 +101,14 @@ export default {
             myID: null,
             myProfilePicture: null
         };
+    },
+    computed: {
+        currentChat: function() {
+            if (this.chats) {
+                return this.chats[this.chatIndex(this.currentChatID)]
+            }
+            return null;
+        }
     },
     created() {
         this.Audio_GotMessage = new Audio(a_GotMessage);
@@ -177,45 +185,50 @@ export default {
         },
         async seekMessages() {
             const URL = 'api/seekmessages';
-            const response = await fetch(URL, {method: 'POST'});
-            const data = await response.json();
-            if (data.status == 'LOGOUT') {
-                localStorage.clear();
-                this.currentChatID = null;
-                this.chats = {};
-                return;
-            }
-            if (data.status == 'GOT_MESSAGES' && data.messages) {
-                this.Audio_GotMessage.play();
-                data.messages.forEach(elem => {
-                    let [id, senderID, sender, text, datetime] = [elem.id, elem.senderID, elem.sender, elem.text, elem.datetime];
-                    if (this.currentChatID == senderID) {
-                        this.readChat(senderID);
-                    }
-                    if (senderID && sender) {
-                        if (!this.chats[this.chatIndex(senderID)]) {
-                            this.chats.unshift({
-                                id: senderID,
-                                name: sender,
-                                messages: [],
-                                unreadCount: 0
-                            });
+            while (this.screen == 'chats') {
+                const response = await fetch(URL, {method: 'POST'});
+                const data = await response.json();
+                if (data.status == 'LOGOUT') {
+                    localStorage.clear();
+                    this.currentChatID = null;
+                    this.chats = {};
+                    return;
+                }
+                if (data.status == 'GOT_MESSAGES' && data.messages) {
+                    data.messages.forEach(elem => {
+                        const [id, senderID, recipientID, sender, text, datetime, profilePicture]
+                        = [elem.id, elem.senderID, elem.recipientID, elem.sender, elem.text, elem.datetime, elem.profilePicture];
+                        let chatID = senderID;
+                        if (Number(recipientID) <= 0) {
+                            chatID = recipientID;
                         }
-                        let thisChat = this.chats[this.chatIndex(senderID)];
-                        thisChat.messages.push({
-                            id: id,
-                            senderID: senderID,
-                            sender: sender,
-                            text: text || '',
-                            datetime: datetime || 'Out of time'
-                        });
-                        thisChat.unreadCount++;
-                    }
-                });
-            }
-            this.sortChats();
-            if (this.screen == 'chats') {
-                this.seekMessages();
+                        if (this.currentChatID == chatID) {
+                            this.readChat(chatID);
+                        }
+                        if (senderID >= 0 && senderID != this.myID && sender) {
+                            this.Audio_GotMessage.play();
+                            if (!this.chats[this.chatIndex(chatID)]) {
+                                this.chats.unshift({
+                                    id: senderID,
+                                    name: sender,
+                                    messages: [],
+                                    unreadCount: 0,
+                                    profilePicture: profilePicture || null
+                                });
+                            }
+                            let thisChat = this.chats[this.chatIndex(chatID)];
+                            thisChat.messages.push({
+                                id: id,
+                                senderID: senderID,
+                                sender: sender,
+                                text: text || '',
+                                datetime: datetime || 'Out of time'
+                            });
+                            thisChat.unreadCount++;
+                        }
+                    });
+                }
+                this.sortChats();
             }
         },
         async getAllChats() {
