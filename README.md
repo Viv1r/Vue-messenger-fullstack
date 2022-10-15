@@ -8,4 +8,5 @@
 - Загрузка и отображение аватарок (profile pictures)
 
 Скриншоты: https://vk.com/doc71969366_648737532
+
 Видео: https://youtu.be/POJwnIQTbdQ
