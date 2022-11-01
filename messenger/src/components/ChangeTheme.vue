@@ -3,13 +3,13 @@
 <div class="changetheme_button" @click="changeTheme()">
     <div
         class="changetheme_sunmoon"
-        :style="$store.state.lightTheme
+        :style="getLightTheme
             ? 'background-color: #ffe800; box-shadow: 0px 0px 12px #ffd000'
             : ''"
     >
         <div
             class="changetheme_circle_above"
-            :style="$store.state.lightTheme
+            :style="getLightTheme
                 ? 'transform: translateX(64px); cursor: default; background-color: white'
                 : ''"
         />
@@ -19,17 +19,20 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from 'vuex';
+
 export default {
+    computed: {
+        ...mapGetters(['getLightTheme'])
+    },
     methods: {
+        ...mapActions(['setLightTheme']),
         changeTheme() {
             localStorage.setItem(
                 'light-theme',
-                !this.$store.state.lightTheme
+                !this.getLightTheme
             );
-            this.$store.commit(
-                'setLightTheme',
-                !this.$store.state.lightTheme
-            );
+            this.setLightTheme(!this.getLightTheme);
         }
     }
 }
