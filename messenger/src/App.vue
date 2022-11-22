@@ -11,9 +11,9 @@
     </div>
 </Transition>
 
-<div :class="'app_wrapper' + ($store.state.lightTheme ? ' light' : '')">
+<div :class="'app_wrapper' + (getLightTheme ? ' light' : '')">
     <Transition name="fade">
-        <div v-if="screen == 'chats'"
+        <div v-if="screen === 'chats'"
             :class="'window' + (miniMode ? ' maxed' : '')"
             key="window"
         >
@@ -43,18 +43,18 @@
         </div>
         <div v-else class="basic_screen" key="basic_screen">
             <Transition name="fade_move">
-                <div v-if="screen == 'welcome'" class="welcome_screen" key="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
+                <div v-if="screen === 'welcome'" class="welcome_screen" key="welcome_screen"> <!-- ЭКРАН ПРИВЕТСТВИЯ -->
                     <h1>Welcome!</h1>
                     <button id="register" @click="screen = 'register'">Register</button>
                     <button id="login" @click="screen = 'login'">Log in</button>
                 </div>
-                <template v-else-if="screen == 'register'" key="register_screen">
+                <template v-else-if="screen === 'register'" key="register_screen">
                     <RegisterForm
                         @setLoading="param => loading = param"
                         @setScreen="param => screen = param"
                     />
                 </template>
-                <template v-else-if="screen == 'login'" key="login_screen">
+                <template v-else-if="screen === 'login'" key="login_screen">
                     <LoginForm
                         @setLoading="param => loading = param"
                         @setScreen="param => screen = param"
@@ -68,6 +68,8 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from 'vuex';
+
 import RegisterForm from './components/RegisterForm.vue';
 import LoginForm from './components/LoginForm.vue';
 import ChatDisplay from './components/ChatDisplay.vue';
@@ -103,6 +105,8 @@ export default {
         };
     },
     computed: {
+        ...mapGetters(['getLightTheme']),
+
         currentChat: function() {
             if (this.chats) {
                 return this.chats[this.chatIndex(this.currentChatID)]
@@ -113,8 +117,8 @@ export default {
     created() {
         this.Audio_GotMessage = new Audio(a_GotMessage);
 
-        window.addEventListener("keydown", (e) => {
-            if (this.currentChatID && e.key == "Escape") {
+        window.addEventListener('keydown', (e) => {
+            if (this.currentChatID && e.key === 'Escape') {
                 this.currentChatID = null;
             }
         });
@@ -123,15 +127,16 @@ export default {
             this.miniMode = window.innerWidth < 1000;
         }, 250);
 
-        this.$store.commit(
-            'setLightTheme',
-            localStorage.getItem('light-theme') === 'true'    
-        );
+        this.setLightTheme(localStorage.getItem('light-theme') === 'true');
 
-        auth.cookieAuth(screen => this.screen = screen,
-            id => this.myID = id);
+        auth.cookieAuth(
+            screen => this.screen = screen,
+            id => this.myID = id
+        );
     },
     methods: {
+        ...mapActions(['setLightTheme']),
+
         goToChat(id) {
             if (id != null && !id) return;
             this.currentChatID = id;
@@ -152,7 +157,7 @@ export default {
                 })
             });
             const data = await response.json();
-            if (data.status == 'READ') {
+            if (data.status === 'READ') {
                 this.chats[this.chatIndex(id)].unreadCount = 0;
             }
         },
@@ -175,26 +180,26 @@ export default {
             this.chats.unshift(chat);
         },
         sortChats() {
-            if (this.chats.length >= 2) {
-                this.chats == this.chats.sort((a, b) => {
-                    return a.messages.length && b.messages.length
-                        ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
-                        : a.messages.length || b.messages.length * -1
-                });
-            }
+            if (this.chats.length <= 1) return;
+
+            this.chats = this.chats.sort((a, b) => {
+                return a.messages.length && b.messages.length
+                    ? b.messages[b.messages.length-1].id - a.messages[a.messages.length-1].id
+                    : a.messages.length || b.messages.length * -1
+            });
         },
         async seekMessages() {
             const URL = 'api/seekmessages';
-            while (this.screen == 'chats') {
+            while (this.screen === 'chats') {
                 const response = await fetch(URL, {method: 'POST'});
                 const data = await response.json();
-                if (data.status == 'LOGOUT') {
+                if (data.status === 'LOGOUT') {
                     localStorage.clear();
                     this.currentChatID = null;
                     this.chats = {};
                     return;
                 }
-                if (data.status == 'GOT_MESSAGES' && data.messages) {
+                if (data.status === 'GOT_MESSAGES' && data.messages) {
                     data.messages.forEach(elem => {
                         const [id, senderID, recipientID, sender, text, datetime, profilePicture]
                         = [elem.id, elem.senderID, elem.recipientID, elem.sender, elem.text, elem.datetime, elem.profilePicture];
@@ -202,10 +207,10 @@ export default {
                         if (Number(recipientID) <= 0) {
                             chatID = recipientID;
                         }
-                        if (this.currentChatID == chatID) {
+                        if (this.currentChatID === chatID) {
                             this.readChat(chatID);
                         }
-                        if (senderID >= 0 && senderID != this.myID && sender) {
+                        if (senderID >= 0 && senderID !== this.myID && sender) {
                             this.Audio_GotMessage.play();
                             if (!this.chats[this.chatIndex(chatID)]) {
                                 this.chats.unshift({
@@ -235,7 +240,8 @@ export default {
             const URL = 'api/getallchats';
             const response = await fetch(URL, {method: 'POST'});
             const data = await response.json();
-            if (data.status = 'GOT_CHATS') {
+
+            if (data.status === 'GOT_CHATS') {
                 this.allChats = JSON.parse(JSON.stringify(data.chats));
             }
         },
@@ -253,7 +259,7 @@ export default {
         },
         chatIndex(id) {
             for (let index in this.chats) {
-                if (this.chats[index] && this.chats[index].id == id) {
+                if (this.chats[index] && this.chats[index].id === id) {
                     return index;
                 }
             }
@@ -269,7 +275,7 @@ export default {
 
 #app {
 	margin: 0;
-	padding: none;
+	padding: 0;
 	font-weight: normal;
 	width: 100%;
 	min-height: 100%;

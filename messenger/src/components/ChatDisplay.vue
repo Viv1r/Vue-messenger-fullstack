@@ -13,7 +13,7 @@
     </div>
     <div class="messages_window">
         <template v-if="currentChat.messages.length > 0">
-            <div class="messages_wrapper">
+            <div class="messages_wrapper" ref="messagesWrapper">
                 <div class="messages_list">
                     <div class="message" v-for="(message, index) in currentChat.messages" :title="formatDT(message.datetime)"> 
                         <template v-if="index == 0
@@ -60,6 +60,7 @@
         <div class="input_wrapper">
             <input
                 type="text"
+                ref="typeline"
                 v-model="toSend"
                 @keydown.enter="sendMessage()"
                 @input="setDraft($event.target.value)"
@@ -103,14 +104,16 @@ export default {
     methods: {
         async sendMessage() {
             this.Audio_SendMessage.play();
-            let [recipientID, message] = [this.currentChatID, this.toSend];
+            const [recipientID, message] = [this.currentChatID, this.toSend];
             if (!recipientID || message.length < 1 || message.length > this.MESSAGE_MAX_LENGTH)
                 return;
             this.toSend = '';
             localStorage.removeItem('draft_' + recipientID);
-            let messagesWrapper;
-            if (messagesWrapper = document.querySelector('.messages_wrapper'))
-                messagesWrapper.scrollTop = 0;
+
+            const messagesWrapper = this.$refs.messagesWrapper;
+            if (messagesWrapper) {
+                messagesWrapper.scrollTop = 0
+            }
 
             const URL = 'api/sendmessage';
             const response = await fetch(URL, {
@@ -149,14 +152,12 @@ export default {
     watch: {
         currentChatID: function(val) {
             this.toSend = localStorage.getItem('draft_' + val) || '';
+
             // Фокус на строке ввода
-            let result;
-            let interval = setInterval(() => {
-                result = document.querySelector(
-                    '.typeline .input_wrapper input'
-                );
-                if (result) {
-                    result.focus();
+            const interval = setInterval(() => {
+                const typeline = this.$refs.typeline;
+                if (typeline) {
+                    typeline.focus();
                 }
             }, 50);
             setTimeout(() => {
